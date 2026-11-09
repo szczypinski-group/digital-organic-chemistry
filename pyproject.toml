@@ -1,0 +1,10 @@
+[project]
+name = "digital-organic-chemistry"
+version = "0.1.0"
+authors = [
+    { name = "Filip Szczypiński", email = "filip.t.szczypinski@durham.ac.uk" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "marimo>=0.25.2",
+]
