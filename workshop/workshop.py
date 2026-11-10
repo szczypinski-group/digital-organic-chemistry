@@ -4,10 +4,9 @@
 #     "pandas==3.1.1",
 #     "rdkit==2026.9.1",
 # ]
-# requires-python = ">=3.14"
+# requires-python = ">=3.12"
 # ///
 
-from pathlib import PurePath
 import marimo
 
 __generated_with = "0.25.2"
@@ -15,7 +14,7 @@ app = marimo.App(width="medium")
 
 
 @app.cell(hide_code=True)
-def _():
+def _(PurePath):
     import marimo as mo
     from pathlib import Path
 
@@ -216,6 +215,148 @@ def _(mo):
 
     Next, we will try to make molecular similarity quantitative.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## From molecular structures to molecular similarity
+
+    Looking at the aryl halides above, we can make intuitive judgements about which
+    molecules are structurally similar.
+
+    But how can we make **molecular similarity quantitative**?
+
+    One approach is to convert each molecular graph into a **molecular fingerprint**.
+
+    Here we will use a **Morgan fingerprint**, which describes the local atomic
+    environments present in each molecule. We can then compare pairs of fingerprints
+    using the **Tanimoto similarity coefficient**.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(aryl_halides, mo):
+    query_selector = mo.ui.dropdown(
+        options={
+            f"Aryl halide {int(number)}": i
+            for i, number in enumerate(aryl_halides["aryl_halide_number"])
+        },
+        value="Aryl halide 1",
+        label="Choose a query molecule:",
+    )
+    return (query_selector,)
+
+
+@app.cell(hide_code=True)
+def _(Chem, Draw, aryl_halide_mols, mo, query_selector):
+    query_index = query_selector.value
+    query_mol = aryl_halide_mols[query_index]
+
+    mo.vstack(
+        [
+            query_selector,
+            Draw.MolToImage(query_mol, size=(300, 220)),
+            mo.md(
+                f"**InChIKey:** `{Chem.MolToInchiKey(query_mol)}`"
+            ),
+        ],
+        align="center",
+    )
+    return (query_index,)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Morgan fingerprints
+
+    A Morgan fingerprint converts each molecular graph into a fixed-length bit vector
+    describing the local atomic environments present in the molecule.
+
+    Here we use:
+
+    - **radius = 2**: environments extending up to two bonds from each atom;
+    - **2048 bits**: the length of the fingerprint.
+    """)
+    return
+
+
+@app.cell
+def _(aryl_halide_mols):
+    from rdkit import DataStructs
+    from rdkit.Chem import rdFingerprintGenerator
+
+    morgan_generator = rdFingerprintGenerator.GetMorganGenerator(
+        radius=2,
+        fpSize=2048,
+    )
+
+    aryl_halide_fps = [
+        morgan_generator.GetFingerprint(mol)
+        for mol in aryl_halide_mols
+    ]
+    return DataStructs, aryl_halide_fps
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    We can compare two fingerprints using the **Tanimoto similarity coefficient**.
+    """)
+    return
+
+
+@app.cell
+def _(DataStructs, aryl_halide_fps, query_index):
+    query_fp = aryl_halide_fps[query_index]
+
+    similarities = [
+        DataStructs.TanimotoSimilarity(query_fp, fp)
+        for fp in aryl_halide_fps
+    ]
+
+    similarity_order = sorted(
+        range(len(similarities)),
+        key=lambda i: similarities[i],
+        reverse=True,
+    )
+
+    nearest_indices = similarity_order[:6]
+    return nearest_indices, similarities
+
+
+@app.cell(hide_code=True)
+def _(aryl_halides, mo, query_index):
+    mo.md(f"""
+    ### Nearest neighbours to aryl halide {int(aryl_halides.iloc[query_index]["aryl_halide_number"])}
+
+    The structures below are ranked using **Morgan fingerprint Tanimoto similarity**.
+
+    A Tanimoto similarity of:
+
+    - **1.0** means the fingerprints are identical;
+    - values closer to **0** indicate fewer shared fingerprint features.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(Draw, aryl_halide_mols, aryl_halides, nearest_indices, similarities):
+    Draw.MolsToGridImage(
+        [aryl_halide_mols[i] for i in nearest_indices],
+        legends=[
+            (
+                f"{int(aryl_halides.iloc[i]['aryl_halide_number'])}: "
+                f"T = {similarities[i]:.2f}"
+            )
+            for i in nearest_indices
+        ],
+        molsPerRow=3,
+        subImgSize=(280, 190),
+    )
     return
 
 
