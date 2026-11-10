@@ -47,7 +47,7 @@ def _():
     from rdkit import Chem
     from rdkit.Chem import Draw
 
-    return (Chem,)
+    return Chem, Draw
 
 
 @app.cell(hide_code=True)
@@ -94,12 +94,30 @@ def _(Chem, smiles_input):
     smiles = smiles_input.value
 
     mol = Chem.MolFromSmiles(smiles)
-    canonical_smiles = Chem.MolToSmiles(mol)
-    return
+    return mol, smiles
 
 
 @app.cell(hide_code=True)
-def _():
+def _(Chem, Draw, mo, mol, smiles):
+    mo.stop(
+        mol is None,
+        mo.callout(
+            "RDKit could not interpret this SMILES. Check the syntax and try again.",
+            kind="warn",
+        ),
+    )
+
+    canonical_smiles = Chem.MolToSmiles(mol, canonical=True)
+    image = Draw.MolToImage(mol, size=(300, 200))
+
+    mo.vstack(
+        [
+            mo.md(f"**You entered:** `{smiles}`"),
+            image,
+            mo.md(f"**RDKit canonical SMILES:** `{canonical_smiles}`"),
+        ],
+        align="center",
+    )
     return
 
 
