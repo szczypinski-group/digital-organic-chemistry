@@ -304,7 +304,29 @@ def _(aryl_halide_mols):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    We can compare two fingerprints using the **Tanimoto similarity coefficient**.
+    Once molecules have been converted into binary fingerprints, we can compare
+    them using the **Tanimoto similarity coefficient**:
+
+    \[
+    T(A,B)=\frac{c}{a+b-c}
+    \]
+
+    where:
+
+    - \(a\) is the number of fingerprint features in molecule \(A\);
+    - \(b\) is the number of fingerprint features in molecule \(B\);
+    - \(c\) is the number of features shared by both molecules.
+
+    Therefore,
+
+    \[
+    T(A,B)=
+    \frac{\text{shared features}}
+    {\text{features present in either molecule}}
+    \]
+
+    \(T=1\) means identical fingerprints, while \(T=0\) means that the fingerprints
+    have no features in common. No need to implement anything as `rdkit` already has a built in function for such analysis.
     """)
     return
 
@@ -324,21 +346,14 @@ def _(DataStructs, aryl_halide_fps, query_index):
         reverse=True,
     )
 
-    nearest_indices = similarity_order[:6]
+    nearest_indices = similarity_order[:]
     return nearest_indices, similarities
 
 
 @app.cell(hide_code=True)
-def _(aryl_halides, mo, query_index):
-    mo.md(f"""
-    ### Nearest neighbours to aryl halide {int(aryl_halides.iloc[query_index]["aryl_halide_number"])}
-
-    The structures below are ranked using **Morgan fingerprint Tanimoto similarity**.
-
-    A Tanimoto similarity of:
-
-    - **1.0** means the fingerprints are identical;
-    - values closer to **0** indicate fewer shared fingerprint features.
+def _(mo):
+    mo.md(r"""
+    The aryl halide set **sorted by Tanimoto similarity** to the query molecule is:
     """)
     return
 
@@ -357,6 +372,61 @@ def _(Draw, aryl_halide_mols, aryl_halides, nearest_indices, similarities):
         molsPerRow=3,
         subImgSize=(280, 190),
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Molecular descriptors
+
+    Morgan fingerprints encode the **structural environments** present in a molecule.
+
+    But sometimes we want numerical features with a more direct chemical
+    interpretation. These are often called **molecular descriptors**.
+
+    For example, in drug discovery, we might describe a molecule using:
+
+    - molecular weight;
+    - lipophilicity;
+    - polarity;
+    - electronic properties.
+
+    Let's calculate a few simple descriptors for the same aryl halides and compare
+    them with our fingerprint-based view of similarity.
+    """)
+    return
+
+
+@app.cell
+def _(aryl_halide_mols, aryl_halides):
+    from rdkit.Chem import Descriptors
+
+    aryl_halide_descriptors = aryl_halides[
+        ["aryl_halide_number", "aryl_halide_smiles"]
+    ].copy()
+
+    aryl_halide_descriptors["MW"] = [
+        Descriptors.MolWt(mol)
+        for mol in aryl_halide_mols
+    ]
+
+    aryl_halide_descriptors["cLogP"] = [
+        Descriptors.MolLogP(mol)
+        for mol in aryl_halide_mols
+    ]
+
+    aryl_halide_descriptors["TPSA"] = [
+        Descriptors.TPSA(mol)
+        for mol in aryl_halide_mols
+    ]
+
+    aryl_halide_descriptors["FractionCSP3"] = [
+        Descriptors.FractionCSP3(mol)
+        for mol in aryl_halide_mols
+    ]
+
+    aryl_halide_descriptors
     return
 
 
