@@ -19,7 +19,8 @@ def _(PurePath):
     from pathlib import Path
 
     ROOT: mo.notebook_location()
-    DATA_DIR = ROOT / "data"
+    # DATA_DIR = ROOT / "data"
+    DATA_DIR = Path(r"https://github.com/szczypinski-group/digital-organic-chemistry/blob/dev/workshop/data/data_table.csv")
     return DATA_DIR, mo
 
 
