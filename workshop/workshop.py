@@ -27,7 +27,7 @@ def _():
     DATA_URL = (
         "https://raw.githubusercontent.com/"
         "szczypinski-group/digital-organic-chemistry/"
-        "dev/workshop/data/data_table.csv"
+        "main/workshop/data/data_table.csv"
     )
     return DATA_URL, mo, np
 
@@ -147,7 +147,7 @@ def _(mo):
     mo.image(
         "https://raw.githubusercontent.com/"
         "szczypinski-group/digital-organic-chemistry/"
-        "dev/workshop/ahneman-figure.png"
+        "main/workshop/ahneman-figure.png"
     )
     return
 
