@@ -1,8 +1,11 @@
 # /// script
 # dependencies = [
+#     "altair==6.3.0",
 #     "marimo",
+#     "numpy==2.5.4",
 #     "pandas==3.1.1",
 #     "rdkit==2026.9.1",
+#     "scikit-learn==1.9.1",
 # ]
 # requires-python = ">=3.12"
 # ///
@@ -14,14 +17,19 @@ app = marimo.App(width="medium")
 
 
 @app.cell(hide_code=True)
-def _(PurePath):
+def _():
     import marimo as mo
     from pathlib import Path
+    import numpy as np
 
     ROOT: mo.notebook_location()
     # DATA_DIR = ROOT / "data"
-    DATA_DIR = Path(r"https://github.com/szczypinski-group/digital-organic-chemistry/blob/dev/workshop/data/data_table.csv")
-    return DATA_DIR, mo
+    DATA_URL = (
+        "https://raw.githubusercontent.com/"
+        "szczypinski-group/digital-organic-chemistry/"
+        "dev/workshop/data/data_table.csv"
+    )
+    return DATA_URL, mo, np
 
 
 @app.cell(hide_code=True)
@@ -134,13 +142,23 @@ def _(mo):
     return
 
 
-@app.cell
-def _(DATA_DIR):
+@app.cell(hide_code=True)
+def _(mo):
+    mo.image(
+        "https://raw.githubusercontent.com/"
+        "szczypinski-group/digital-organic-chemistry/"
+        "dev/workshop/ahneman-figure.png"
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(DATA_URL):
     import pandas as pd
 
-    reactions = pd.read_csv(DATA_DIR / "data_table.csv")
+    reactions = pd.read_csv(DATA_URL)
     reactions
-    return (reactions,)
+    return pd, reactions
 
 
 @app.cell(hide_code=True)
@@ -154,7 +172,7 @@ def _(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(Chem, reactions):
     aryl_halides = (
         reactions[
@@ -175,7 +193,7 @@ def _(Chem, reactions):
     return aryl_halide_mols, aryl_halides
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(Chem, Draw, aryl_halide_mols, aryl_halides):
     Draw.MolsToGridImage(
         aryl_halide_mols,
@@ -276,30 +294,8 @@ def _(mo):
 
     A Morgan fingerprint converts each molecular graph into a fixed-length bit vector
     describing the local atomic environments present in the molecule.
-
-    Here we use:
-
-    - **radius = 2**: environments extending up to two bonds from each atom;
-    - **2048 bits**: the length of the fingerprint.
     """)
     return
-
-
-@app.cell
-def _(aryl_halide_mols):
-    from rdkit import DataStructs
-    from rdkit.Chem import rdFingerprintGenerator
-
-    morgan_generator = rdFingerprintGenerator.GetMorganGenerator(
-        radius=2,
-        fpSize=2048,
-    )
-
-    aryl_halide_fps = [
-        morgan_generator.GetFingerprint(mol)
-        for mol in aryl_halide_mols
-    ]
-    return DataStructs, aryl_halide_fps
 
 
 @app.cell(hide_code=True)
@@ -332,8 +328,53 @@ def _(mo):
     return
 
 
-@app.cell
-def _(DataStructs, aryl_halide_fps, query_index):
+@app.cell(hide_code=True)
+def _(mo):
+    fp_radius = mo.ui.slider(
+        start=0,
+        stop=3,
+        step=1,
+        value=2,
+        label="Morgan fingerprint radius",
+        show_value=True,
+    )
+
+    fp_size = mo.ui.slider(
+        start=256,
+        stop=2048,
+        step=256,
+        value=1024,
+        label="Fingerprint size",
+        show_value=True,
+    )
+
+    mo.hstack(
+        [fp_radius, fp_size],
+        gap=2,
+        justify="start",
+    )
+    return fp_radius, fp_size
+
+
+@app.cell(hide_code=True)
+def _(aryl_halide_mols, fp_radius, fp_size, query_index):
+    from rdkit import DataStructs
+    from rdkit.Chem import rdFingerprintGenerator
+
+    # FINGERPRINT GENERATION
+
+    morgan_generator = rdFingerprintGenerator.GetMorganGenerator(
+        radius=fp_radius.value,
+        fpSize=fp_size.value,
+    )
+
+    aryl_halide_fps = [
+        morgan_generator.GetFingerprint(mol)
+        for mol in aryl_halide_mols
+    ]
+
+    # TANIMOTO SIMILARITY CALCULATION
+
     query_fp = aryl_halide_fps[query_index]
 
     similarities = [
@@ -348,7 +389,7 @@ def _(DataStructs, aryl_halide_fps, query_index):
     )
 
     nearest_indices = similarity_order[:]
-    return nearest_indices, similarities
+    return aryl_halide_fps, nearest_indices, similarities
 
 
 @app.cell(hide_code=True)
@@ -379,75 +420,376 @@ def _(Draw, aryl_halide_mols, aryl_halides, nearest_indices, similarities):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
+    The the **PCA representation of the ECFP space** is:
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(PCA, alt, aryl_halide_fps, aryl_halides, np, query_index):
+    fingerprint_matrix = np.array([
+        list(fp)
+        for fp in aryl_halide_fps
+    ])
+
+    ecfp_pca = PCA(n_components=2)
+    ecfp_scores = ecfp_pca.fit_transform(fingerprint_matrix)
+
+    ecfp_pca_data = aryl_halides[
+        ["aryl_halide_number", "aryl_halide_smiles"]
+    ].copy()
+
+    ecfp_pca_data["PC1"] = ecfp_scores[:, 0]
+    ecfp_pca_data["PC2"] = ecfp_scores[:, 1]
+
+    ecfp_pca_data["selected"] = [
+        i == query_index
+        for i in range(len(ecfp_pca_data))
+    ]
+
+    ecfp_variance = ecfp_pca.explained_variance_ratio_ * 100
+
+    ecfp_plot = (
+        alt.Chart(ecfp_pca_data)
+        .mark_circle(size=45, opacity=0.7)
+        .encode(
+            x=alt.X(
+                "PC1:Q",
+                title=f"PC1 ({ecfp_variance[0]:.1f}% variance)",
+                scale=alt.Scale(zero=False),
+            ),
+            y=alt.Y(
+                "PC2:Q",
+                title=f"PC2 ({ecfp_variance[1]:.1f}% variance)",
+                scale=alt.Scale(zero=False),
+            ),
+            color=alt.condition(
+                "datum.selected",
+                alt.value("#d62728"),
+                alt.value("#777777"),
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    "aryl_halide_number:Q",
+                    title="Aryl halide",
+                    format=".0f",
+                ),
+                alt.Tooltip(
+                    "aryl_halide_smiles:N",
+                    title="SMILES",
+                ),
+            ],
+        )
+        .properties(
+            width=600,
+            height=430,
+            title="Morgan fingerprint space",
+        )
+        .interactive()
+    )
+
+    ecfp_plot
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
     ## Molecular descriptors
 
     Morgan fingerprints encode the **structural environments** present in a molecule.
 
-    But sometimes we want numerical features with a more direct chemical
-    interpretation. These are often called **molecular descriptors**.
+    But sometimes we want numerical features with a more direct chemical interpretation. These are often called **molecular descriptors**.
 
-    For example, in drug discovery, we might describe a molecule using:
+    For the same aryl halides, we will calculate descriptors describing:
 
-    - molecular weight;
-    - lipophilicity;
-    - polarity;
-    - electronic properties.
+    - **size:** molecular weight (MW), heavy-atom count, and Labute accessible surface area;
+    - **lipophilicity and polarisability:** cLogP and molecular refractivity (MolMR);
+    - **polarity and hydrogen bonding:** topological polar surface area (TPSA), hydrogen-bond acceptors (HBA), and hydrogen-bond donors (HBD);
+    - **shape and topology:** rotatable bonds, fraction of sp³ carbon atoms, ring count, and aromatic ring count.
 
-    Let's calculate a few simple descriptors for the same aryl halides and compare
-    them with our fingerprint-based view of similarity.
+    We will then use PCA to explore how these molecular properties distinguish the aryl halides.
     """)
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(aryl_halide_mols, aryl_halides):
-    from rdkit.Chem import Descriptors
+    from rdkit.Chem import Descriptors, Lipinski
 
-    aryl_halide_descriptors = aryl_halides[
+    descriptor_data = aryl_halides[
         ["aryl_halide_number", "aryl_halide_smiles"]
     ].copy()
 
-    aryl_halide_descriptors["MW"] = [
-        Descriptors.MolWt(mol)
-        for mol in aryl_halide_mols
+    descriptor_data["MW"] = [
+        Descriptors.MolWt(mol) for mol in aryl_halide_mols
     ]
 
-    aryl_halide_descriptors["cLogP"] = [
-        Descriptors.MolLogP(mol)
-        for mol in aryl_halide_mols
+    descriptor_data["cLogP"] = [
+        Descriptors.MolLogP(mol) for mol in aryl_halide_mols
     ]
 
-    aryl_halide_descriptors["TPSA"] = [
-        Descriptors.TPSA(mol)
-        for mol in aryl_halide_mols
+    descriptor_data["TPSA"] = [
+        Descriptors.TPSA(mol) for mol in aryl_halide_mols
     ]
 
-    aryl_halide_descriptors["FractionCSP3"] = [
-        Descriptors.FractionCSP3(mol)
-        for mol in aryl_halide_mols
+    descriptor_data["HBA"] = [
+        Descriptors.NumHAcceptors(mol) for mol in aryl_halide_mols
     ]
 
-    aryl_halide_descriptors
-    return
+    descriptor_data["HBD"] = [
+        Descriptors.NumHDonors(mol) for mol in aryl_halide_mols
+    ]
 
-@app.cell
+    descriptor_data["RotatableBonds"] = [
+        Descriptors.NumRotatableBonds(mol) for mol in aryl_halide_mols
+    ]
+
+    descriptor_data["FractionCSP3"] = [
+        Descriptors.FractionCSP3(mol) for mol in aryl_halide_mols
+    ]
+
+    descriptor_data["HeavyAtomCount"] = [
+        Descriptors.HeavyAtomCount(mol) for mol in aryl_halide_mols
+    ]
+
+    descriptor_data["RingCount"] = [
+        Descriptors.RingCount(mol) for mol in aryl_halide_mols
+    ]
+
+    descriptor_data["AromaticRingCount"] = [
+        Lipinski.NumAromaticRings(mol) for mol in aryl_halide_mols
+    ]
+
+    descriptor_data["MolMR"] = [
+        Descriptors.MolMR(mol) for mol in aryl_halide_mols
+    ]
+
+    descriptor_data["LabuteASA"] = [
+        Descriptors.LabuteASA(mol) for mol in aryl_halide_mols
+    ]
+
+    descriptor_data
+    return (descriptor_data,)
+
+
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ### Compare the representations
-    
-    Look at one of the related **Cl / Br / I** series in the table.
-    
-    Earlier, the Morgan fingerprints placed these compounds extremely close together.
-    
-    Now compare their descriptor values.
-    
-    - Which descriptors change when Cl is replaced by Br or I?
-    - Which descriptors remain almost unchanged?
-    - Do fingerprints and descriptors therefore contain the same information?
-    
+    ### PCA of molecular descriptors
+
+    Because these descriptors have different units and numerical ranges, we first
+    **standardise** them to mean 0 and standard deviation 1.
+
+    We then use PCA to reduce the 12-dimensional descriptor space to two principal
+    components for visualisation.
+
+    The **scores** tell us where each molecule lies in this new space, while the
+    **loadings** tell us which molecular descriptors contribute most strongly to
+    each principal component.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(descriptor_data):
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.decomposition import PCA
+
+    descriptor_columns = [
+        "MW",
+        "cLogP",
+        "TPSA",
+        "HBA",
+        "HBD",
+        "RotatableBonds",
+        "FractionCSP3",
+        "HeavyAtomCount",
+        "RingCount",
+        "AromaticRingCount",
+        "MolMR",
+        "LabuteASA",
+    ]
+
+    X_descriptors = descriptor_data[descriptor_columns].to_numpy()
+
+    X_descriptors_scaled = StandardScaler().fit_transform(X_descriptors)
+
+    descriptor_pca = PCA(n_components=2)
+    descriptor_scores = descriptor_pca.fit_transform(X_descriptors_scaled)
+    return PCA, descriptor_columns, descriptor_pca, descriptor_scores
+
+
+@app.cell(hide_code=True)
+def _(descriptor_data, descriptor_pca, descriptor_scores, query_index):
+    import altair as alt
+
+    descriptor_pca_data = descriptor_data[
+        ["aryl_halide_number", "aryl_halide_smiles"]
+    ].copy()
+
+    descriptor_pca_data["PC1"] = descriptor_scores[:, 0]
+    descriptor_pca_data["PC2"] = descriptor_scores[:, 1]
+
+    descriptor_pca_data["selected"] = [
+        i == query_index
+        for i in range(len(descriptor_pca_data))
+    ]
+
+
+    descriptor_pca_plot = (
+        alt.Chart(descriptor_pca_data)
+        .mark_circle(
+            size=65,
+            opacity=0.75,
+        )
+        .encode(
+            x=alt.X(
+                "PC1:Q",
+                title=f"PC1 ({descriptor_pca.explained_variance_ratio_[0]*100:.1f}% variance)",
+                scale=alt.Scale(zero=False),
+            ),
+            y=alt.Y(
+                "PC2:Q",
+                title=f"PC2 ({descriptor_pca.explained_variance_ratio_[1]*100:.1f}% variance)",
+                scale=alt.Scale(zero=False),
+            ),
+            color=alt.condition(
+                "datum.selected",
+                alt.value("#d62728"),
+                alt.value("#777777"),
+            ),
+            size=alt.condition(
+                "datum.selected",
+                alt.value(160),
+                alt.value(65),
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    "aryl_halide_number:Q",
+                    title="Aryl halide",
+                    format=".0f",
+                ),
+                alt.Tooltip(
+                    "aryl_halide_smiles:N",
+                    title="SMILES",
+                ),
+            ],
+        )
+        .properties(
+            width=600,
+            height=430,
+            title="PCA of molecular descriptors",
+        )
+        .interactive()
+    )
+
+    descriptor_pca_plot
+    return (alt,)
+
+
+@app.cell(hide_code=True)
+def _(alt, descriptor_columns, descriptor_pca, pd):
+    n_loadings = 4
+
+    loadings = pd.DataFrame(
+        descriptor_pca.components_.T,
+        index=descriptor_columns,
+        columns=["PC1", "PC2"],
+    )
+
+    loadings
+
+    largest_loadings = pd.concat(
+        [
+            loadings[pc]
+            .loc[loadings[pc].abs().nlargest(n_loadings).index]
+            .rename("Loading")
+            .reset_index()
+            .rename(columns={"index": "Descriptor"})
+            .assign(PC=pc)
+            for pc in ["PC1", "PC2"]
+        ]
+    )
+
+
+    largest_loadings_plot = (
+        alt.Chart(largest_loadings)
+        .mark_bar()
+        .encode(
+            x=alt.X(
+                "Loading:Q",
+                title="PCA loading",
+            ),
+            y=alt.Y(
+                "Descriptor:N",
+                title=None,
+                sort="-x",
+            ),
+            color=alt.Color(
+                "PC:N",
+                title=None,
+                scale=alt.Scale(
+                    domain=["PC1", "PC2"],
+                    range=["#4c78a8", "#f58518"],
+                ),
+            ),
+            column=alt.Column(
+                "PC:N",
+                title=None,
+            ),
+            tooltip=[
+                "Descriptor:N",
+                "PC:N",
+                alt.Tooltip(
+                    "Loading:Q",
+                    format=".3f",
+                ),
+            ],
+        )
+        .properties(
+            width=250,
+            height=180,
+            title="Largest descriptor contributions",
+        )
+    )
+
+    largest_loadings_plot
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### Different chemical spaces
+
+    Both plots contain exactly the same aryl halides.
+
+    The difference is **how the molecules were represented**:
+
+    - **Morgan fingerprints** encode local structural environments in the molecular graph.
+    - **Molecular descriptors** encode selected properties such as size, polarity,
+      lipophilicity, flexibility and topology.
+
+    Notice that molecular relationships visible in one representation may be much
+    less obvious in the other.
+
     A molecular representation determines **which differences between molecules are
     made visible to a computational model**.
+
+    **Chemical space is not unique: its structure depends on how we
+    choose to represent the molecules.**
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+ 
+    """)
+    return
+
 
 if __name__ == "__main__":
     app.run()
