@@ -18,7 +18,7 @@ def _(PurePath):
     import marimo as mo
     from pathlib import Path
 
-    ROOT: PurePath = mo.notebook_location()
+    ROOT: mo.notebook_location()
     DATA_DIR = ROOT / "data"
     return DATA_DIR, mo
 
