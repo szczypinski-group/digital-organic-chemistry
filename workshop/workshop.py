@@ -284,7 +284,7 @@ def _(Chem, Draw, aryl_halide_mols, mo, query_selector):
         ],
         align="center",
     )
-    return (query_index,)
+    return query_index, query_mol
 
 
 @app.cell(hide_code=True)
@@ -357,7 +357,7 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(aryl_halide_mols, fp_radius, fp_size, query_index):
+def _(aryl_halide_mols, fp_radius, fp_size, query_index, query_mol):
     from rdkit import DataStructs
     from rdkit.Chem import rdFingerprintGenerator
 
@@ -389,13 +389,115 @@ def _(aryl_halide_mols, fp_radius, fp_size, query_index):
     )
 
     nearest_indices = similarity_order[:]
+
+    fp_additional_output = rdFingerprintGenerator.AdditionalOutput()
+    fp_additional_output.AllocateBitInfoMap()
+
+    display_fp = morgan_generator.GetFingerprint(
+        query_mol,
+        additionalOutput=fp_additional_output,
+    )
+
+    display_bit_info = fp_additional_output.GetBitInfoMap()
+    active_bits = list(display_fp.GetOnBits())
     return (
         DataStructs,
+        active_bits,
         aryl_halide_fps,
+        display_bit_info,
         nearest_indices,
         rdFingerprintGenerator,
         similarities,
     )
+
+
+@app.cell(hide_code=True)
+def _(
+    DataStructs,
+    alt,
+    aryl_halide_fps,
+    fp_radius,
+    fp_size,
+    np,
+    pd,
+    query_index,
+):
+    fingerprint_array = np.zeros(
+        fp_size.value,
+        dtype=np.uint8,
+    )
+
+    DataStructs.ConvertToNumpyArray(
+        aryl_halide_fps[query_index],
+        fingerprint_array,
+    )
+
+    fingerprint_barcode_data = pd.DataFrame({
+        "bit": np.arange(fp_size.value),
+        "value": fingerprint_array,
+    })
+
+    fingerprint_barcode = (
+        alt.Chart(fingerprint_barcode_data)
+        .mark_rect()
+        .encode(
+            x=alt.X(
+                "bit:O",
+                title="Fingerprint bit",
+                axis=None,
+            ),
+            color=alt.Color(
+                "value:N",
+                scale=alt.Scale(
+                    domain=[0, 1],
+                    range=["#eeeeee", "#111111"],
+                ),
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("bit:O", title="Bit"),
+                alt.Tooltip("value:N", title="State"),
+            ],
+        )
+        .properties(
+            width=750,
+            height=45,
+            title=(
+                f"Morgan fingerprint "
+                f"(radius = {fp_radius.value}, "
+                f"{fp_size.value} bits)"
+            ),
+        )
+    )
+
+    fingerprint_barcode
+    return
+
+
+@app.cell(hide_code=True)
+def _(Draw, active_bits, display_bit_info, mo, query_mol):
+    fingerprint_fragments_svg = Draw.DrawMorganBits(
+        [
+            (query_mol, bit, display_bit_info)
+            for bit in active_bits
+        ],
+        molsPerRow=4,
+        legends=[
+            (
+                f"Bit {bit} | r={display_bit_info[bit][0][1]}"
+                + (
+                    f" | {len(display_bit_info[bit])} envs"
+                    if len(display_bit_info[bit]) > 1
+                    else ""
+                )
+            )
+            for bit in active_bits
+        ],
+        useSVG=True,
+    )
+
+    mo.Html(fingerprint_fragments_svg)
+    return
 
 
 @app.cell(hide_code=True)
