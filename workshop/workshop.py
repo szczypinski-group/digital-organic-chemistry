@@ -429,6 +429,24 @@ def _(aryl_halide_mols, aryl_halides):
     aryl_halide_descriptors
     return
 
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ### Compare the representations
+    
+    Look at one of the related **Cl / Br / I** series in the table.
+    
+    Earlier, the Morgan fingerprints placed these compounds extremely close together.
+    
+    Now compare their descriptor values.
+    
+    - Which descriptors change when Cl is replaced by Br or I?
+    - Which descriptors remain almost unchanged?
+    - Do fingerprints and descriptors therefore contain the same information?
+    
+    A molecular representation determines **which differences between molecules are
+    made visible to a computational model**.
+    """)
 
 if __name__ == "__main__":
     app.run()
