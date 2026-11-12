@@ -389,7 +389,13 @@ def _(aryl_halide_mols, fp_radius, fp_size, query_index):
     )
 
     nearest_indices = similarity_order[:]
-    return aryl_halide_fps, nearest_indices, similarities
+    return (
+        DataStructs,
+        aryl_halide_fps,
+        nearest_indices,
+        rdFingerprintGenerator,
+        similarities,
+    )
 
 
 @app.cell(hide_code=True)
@@ -773,7 +779,6 @@ def _(mo):
 
     Notice that molecular relationships visible in one representation may be much
     less obvious in the other.
-
     A molecular representation determines **which differences between molecules are
     made visible to a computational model**.
 
@@ -786,8 +791,353 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
- 
+    # Can molecular representations predict chemistry?
+
+    So far, we have converted molecular structures into numerical representations:
+
+    - **Morgan fingerprints**, describing structural environments;
+    - **molecular descriptors**, describing selected calculated properties.
+
+    The Buchwald–Hartwig dataset also contains an experimentally measured **reaction yield**.
+
+    > **Can information about the molecules involved in a reaction be used to predict its yield?**
+
+    For each reaction, we will combine representations of the:
+
+    - aryl halide;
+    - ligand;
+    - base;
+    - additive.
+
+    We will then train a simple machine-learning model on some of the experimental
+    reactions and ask it to predict the yields of reactions it has not seen.
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(Chem, DataStructs, np, pd, rdFingerprintGenerator, reactions):
+    rxn_fp_size=256
+
+    reaction_fp_generator = rdFingerprintGenerator.GetMorganGenerator(
+        radius=2,
+        fpSize=rxn_fp_size,
+    )
+
+    def reaction_component_fp(smiles):
+        # No component present: represent with an all-zero fingerprint
+        if pd.isna(smiles) or smiles == "":
+            return np.zeros(rxn_fp_size, dtype=np.uint8)
+
+        mol = Chem.MolFromSmiles(smiles)
+
+        if mol is None:
+            raise ValueError(f"Could not parse SMILES: {smiles}")
+
+        fp = reaction_fp_generator.GetFingerprint(mol)
+
+        fp_array = np.zeros(rxn_fp_size, dtype=np.uint8)
+        DataStructs.ConvertToNumpyArray(fp, fp_array)
+
+        return fp_array
+
+    reaction_feature_rows = []
+
+    for _, reaction in reactions.iterrows():
+
+        has_additive = np.array(
+            [0 if pd.isna(reaction["additive_smiles"]) else 1],
+            dtype=np.uint8,
+        )
+
+        reaction_features = np.concatenate(
+            [
+                reaction_component_fp(reaction["aryl_halide_smiles"]),
+                reaction_component_fp(reaction["ligand_smiles"]),
+                reaction_component_fp(reaction["base_smiles"]),
+                reaction_component_fp(reaction["additive_smiles"]),
+                has_additive,
+            ]
+        )
+
+        reaction_feature_rows.append(reaction_features)
+
+    reaction_X = np.vstack(reaction_feature_rows)
+    reaction_y = reactions["yield"].to_numpy()
+    return reaction_X, reaction_y
+
+
+@app.cell(hide_code=True)
+def _(mo, reaction_X):
+    mo.md(f"""
+    ## Representing a complete reaction
+
+    We represent each reaction by joining together the Morgan fingerprints of its
+    four variable molecular components:
+
+    \[
+    X =
+    FP_{{aryl\ halide}}
+    \;||\;
+    FP_{{ligand}}
+    \;||\;
+    FP_{{base}}
+    \;||\;
+    FP_{{additive}}
+    \]
+
+    Some experiments deliberately contain **no additive**. This is not missing
+    experimental data: *no additive* is itself an experimental condition.
+
+    For these reactions we use:
+
+    - an all-zero additive fingerprint;
+    - one additional `has_additive` feature.
+
+    In this workshop, we will not tune the parameters of the machine learning model and will also just use a small 256-bit fingerprint.
+    Each reaction is therefore represented by **{reaction_X.shape[1]} numerical
+    features**, and our dataset contains **{reaction_X.shape[0]} measured reactions**.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    split_strategy = mo.ui.dropdown(
+        options={
+            "Random 80:20 split": "random",
+            "Leave one aryl halide out": "aryl_halide",
+            "Leave one ligand out": "ligand",
+        },
+        value="Random 80:20 split",
+        label="How should we test the model?",
+    )
+    return (split_strategy,)
+
+
+@app.cell(hide_code=True)
+def _(aryl_halides, mo, reactions, split_strategy):
+    aryl_holdout = mo.ui.dropdown(
+        options={
+            f"{int(number)}: {name}": number
+            for number, name in zip(
+                aryl_halides["aryl_halide_number"],
+                aryl_halides["aryl_halide"],
+            )
+        },
+        label="Aryl halide to hold out:",
+        value='1: 1-chloro-4-(trifluoromethyl)benzene'
+    )
+
+    ligand_holdout = mo.ui.dropdown(
+        options={
+            str(name): name
+            for name in sorted(reactions["ligand"].dropna().unique())
+        },
+        label="Ligand to hold out:",
+        value=reactions["ligand"].dropna().unique()[0]
+    )
+
+    if split_strategy.value == "aryl_halide":
+        holdout_selector = aryl_holdout
+    elif split_strategy.value == "ligand":
+        holdout_selector = ligand_holdout
+    else:
+        holdout_selector = mo.md(
+            "The test reactions will be selected randomly."
+        )
+
+    mo.vstack(
+        [
+            split_strategy,
+            holdout_selector,
+        ]
+    )
+    return aryl_holdout, ligand_holdout
+
+
+@app.cell(hide_code=True)
+def _(
+    aryl_holdout,
+    ligand_holdout,
+    np,
+    reaction_X,
+    reaction_y,
+    reactions,
+    split_strategy,
+):
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import mean_absolute_error, r2_score
+
+    if split_strategy.value == "random":
+
+        (
+            reaction_train_indices,
+            reaction_test_indices,
+        ) = train_test_split(
+            np.arange(len(reactions)),
+            test_size=0.20,
+            random_state=42,
+        )
+
+    elif split_strategy.value == "aryl_halide":
+
+        holdout_value = aryl_holdout.value
+
+        reaction_test_indices = np.where(
+            reactions["aryl_halide_number"].to_numpy()
+            == holdout_value
+        )[0]
+
+        reaction_train_indices = np.where(
+            reactions["aryl_halide_number"].to_numpy()
+            != holdout_value
+        )[0]
+
+    elif split_strategy.value == "ligand":
+
+        holdout_value = ligand_holdout.value
+
+        reaction_test_indices = np.where(
+            reactions["ligand"].to_numpy()
+            == holdout_value
+        )[0]
+
+        reaction_train_indices = np.where(
+            reactions["ligand"].to_numpy()
+            != holdout_value
+        )[0]
+
+    reaction_X_train = reaction_X[reaction_train_indices]
+    reaction_X_test = reaction_X[reaction_test_indices]
+
+    reaction_y_train = reaction_y[reaction_train_indices]
+    reaction_y_test = reaction_y[reaction_test_indices]
+
+    yield_model = RandomForestRegressor(
+        n_estimators=200,
+        min_samples_leaf=2,
+        n_jobs=-1,
+        random_state=42,
+    )
+
+    yield_model.fit(
+        reaction_X_train,
+        reaction_y_train,
+    )
+
+    reaction_y_pred = yield_model.predict(
+        reaction_X_test
+    )
+
+    yield_mae = mean_absolute_error(
+        reaction_y_test,
+        reaction_y_pred,
+    )
+
+    yield_r2 = r2_score(
+        reaction_y_test,
+        reaction_y_pred,
+    )
+
+    baseline_prediction = np.full_like(
+        reaction_y_test,
+        reaction_y_train.mean(),
+        dtype=float,
+    )
+
+    baseline_mae = mean_absolute_error(
+        reaction_y_test,
+        baseline_prediction,
+    )
+
+    baseline_r2 = r2_score(
+        reaction_y_test,
+        baseline_prediction,
+    )
+
+    {
+        "Random Forest MAE": round(yield_mae, 2),
+        "Mean baseline MAE": round(baseline_mae, 2),
+        "Random Forest R²": round(yield_r2, 3),
+        "Mean baseline R²": round(baseline_r2, 3),
+    }
+    return reaction_y_pred, reaction_y_test
+
+
+@app.cell(hide_code=True)
+def _(alt, pd, reaction_y_pred, reaction_y_test):
+    yield_prediction_data = pd.DataFrame(
+        {
+            "Experimental yield": reaction_y_test,
+            "Predicted yield": reaction_y_pred,
+        }
+    )
+
+    yield_range = [
+        min(
+            yield_prediction_data["Experimental yield"].min(),
+            yield_prediction_data["Predicted yield"].min(),
+        ),
+        max(
+            yield_prediction_data["Experimental yield"].max(),
+            yield_prediction_data["Predicted yield"].max(),
+        ),
+    ]
+
+    yield_points = (
+        alt.Chart(yield_prediction_data)
+        .mark_circle(
+            size=40,
+            opacity=0.55,
+        )
+        .encode(
+            x=alt.X(
+                "Experimental yield:Q",
+                title="Experimental yield / %",
+                scale=alt.Scale(domain=yield_range),
+            ),
+            y=alt.Y(
+                "Predicted yield:Q",
+                title="Predicted yield / %",
+                scale=alt.Scale(domain=yield_range),
+            ),
+            tooltip=[
+                alt.Tooltip("Experimental yield:Q", format=".1f"),
+                alt.Tooltip("Predicted yield:Q", format=".1f"),
+            ],
+        )
+    )
+
+    perfect_prediction_line = (
+        alt.Chart(
+            pd.DataFrame(
+                {
+                    "Experimental yield": yield_range,
+                    "Predicted yield": yield_range,
+                }
+            )
+        )
+        .mark_line(
+            color="#d62728",
+            strokeDash=[6, 4],
+        )
+        .encode(
+            x="Experimental yield:Q",
+            y="Predicted yield:Q",
+        )
+    )
+
+    yield_prediction_plot = (
+        yield_points + perfect_prediction_line
+    ).properties(
+        width=550,
+        height=450,
+        title="Predicted versus experimental reaction yield",
+    ).interactive()
+
+    yield_prediction_plot
     return
 
 
