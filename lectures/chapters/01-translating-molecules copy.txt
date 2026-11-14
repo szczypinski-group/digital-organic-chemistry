@@ -1,0 +1,543 @@
+% !TeX root = ../notes.tex
+
+\chapter{Translating molecules for computers}
+
+
+\section{Information in chemical structures}
+
+Chemists routinely communicate molecular structure using drawings.
+A skeletal formula can encode a considerable amount of information in a compact form because we have learnt conventions for interpreting atoms, bonds, functional groups and stereochemistry.
+Consider a simple example of proline (Fig.~\ref{fig1-1:proline}) and what information we implicitly capture about its structure.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=8.3cm]{figures/CH1-01-proline.png}
+    \caption{Molecular structure of proline.}
+    \label{fig1-1:proline}
+\end{figure}
+
+\solution{5.5cm}{
+    \begin{itemize}
+        \item atoms (incl. implicit hydrogens)
+        \item connectivity and bond orders
+        \item functional groups
+        \item stereochemistry
+        \item protonation
+        \item \dots
+    \end{itemize}
+}
+
+Computers do not interpret chemical drawings in the same way.
+To store, search, compare and analyse molecules computationally, chemical information must first be represented in a form that can be processed by computer algorithms.
+
+\begin{conceptbox}
+\textbf{Main question:} how should we represent a molecule to a computer?
+\end{conceptbox}
+
+Throughout this chapter, we will encounter several ways of representing molecules digitally. 
+These range from three-dimensional atomic coordinates to text strings, identifiers and numerical fingerprints.
+Rather than asking which representation is \enquote{best}, we will ask \keypoint{what chemical information each representation contains}, what it discards, and what it allows us to do.
+
+The information required by a computer depends on the task.
+A calculation of molecular geometry requires the positions of atoms in three-dimensional space.
+A substructure search requires information about atoms and their connectivity.
+Searching a database for a particular chemical requires a consistent identifier.
+Comparing the structural similarity of thousands of compounds requires a representation that can be compared efficiently.
+Consequently, the same molecule may be represented in several different ways within a single workflow.
+
+\begin{resultbox}
+    \textbf{For each task below, consider what information must be retained:} \vspace{0.5em}
+    \begin{itemize}
+        \item calculate the distance between two atoms;
+        \item determine whether a molecule contains a substructure;
+        \item find a compound in a database;
+        \item compare a molecule with one million other structures.
+    \end{itemize}
+\end{resultbox}
+
+\section{Coordinates and molecular geometry}
+
+One of the most direct ways of describing a geometry is to specify the position of every atom in three-dimensional space, often in a simple \texttt{.xyz} file (Lst.~\ref{lst1-1:xyz-proline}).\mcite{Hinsen2000}
+The first line contains the number of atoms, followed by molecule name, and its coordinates.
+Other filetypes (\emph{e.g.}, \texttt{.mol2}) might also include bonding information.
+
+\begin{listing}
+\begin{codebox}{bash}
+17
+Proline
+   H       -0.13097       -1.07655        1.63572
+   C       -0.15726       -0.63902        0.60818
+   C       -1.20401       -1.38526       -0.20437
+   O       -1.15189       -1.78305       -1.35456
+   O       -2.35852       -1.64177        0.45250
+   H       -2.96245       -2.10328       -0.12133
+   N        1.22788       -0.77675        0.06680
+   C        1.69088        0.54717       -0.43489
+   H        2.56627        0.82982        0.18087
+   H        2.04876        0.49358       -1.48090
+   C        0.54048        1.53722       -0.27264
+   H        0.08541        1.78163       -1.25139
+   H        0.88732        2.50157        0.14048
+   C       -0.47304        0.86447        0.64762
+   H       -1.51350        1.08299        0.34489
+   H       -0.38097        1.24444        1.68280
+   H        1.28559       -1.47722       -0.63981
+\end{codebox}
+\caption{Proline geometry as an \texttt{.xyz} file.}
+\label{lst1-1:xyz-proline}
+\end{listing}
+
+For a molecule, a Cartesian representation assigns three coordinates, $(x_i,y_i,z_i)$ for each atom $i$.
+Those are often represented using \keypoint{internal coordinates} (\textit{e.g.}, bond lengths, bond angles, and dihedral angles) in a \emph{Z-matrix}.
+However, even such explicit representation might miss important details required for calculations, \textit{e.g.,} overall charge and spin multiplicity (Lst.~\ref{lst1-1:orca-proline}).
+
+
+\begin{listing}
+\begin{codebox}{bash}
+! B3LYP D3BJ def2-TZVP OPT FREQ
+
+* xyzfile 0 1 proline.xyz
+\end{codebox}
+\caption{An ORCA input file for a geometry optimisation calculation of proline.}
+\label{lst1-1:orca-proline}
+\end{listing}
+
+Now, consider the two structures of proline in Figure~\ref{fig1-2:prolines} -- are they the same molecule?
+A useful molecular representation should not change just because we move or rotate a molecule in space.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=6.4cm]{figures/CH1-01-proline.png}
+    \includegraphics[width=6.4cm]{figures/CH1-02-proline.png}
+    \caption{Two equivalent molecular structures of proline with different atomic coordinates.}
+    \label{fig1-2:prolines}
+\end{figure}
+
+One way to retain information about both atomic identity and molecular geometry upon rotation is the \keypoint{Coulomb matrix}.\mcite{Rupp2012} 
+For atoms with nuclear charges \(Z_i\) and Cartesian positions \(\mathbf{R}_i\),
+
+\mnote{The exponent 2.4 is empirical rather than fundamental:
+the diagonal term approximates the energy of an isolated atom.}
+
+\begin{equation}
+    C_{ij} = \begin{cases} 
+        \frac{1}{2}Z_i^{2.4} & \mathrm{for} \quad i=j,\\[6pt] 
+        \frac{Z_iZ_j}{|\mathbf R_i-\mathbf R_j|} & \mathrm{for} \quad i\ne j. 
+    \end{cases}
+\end{equation}
+
+Because the off-diagonal elements depend only on interatomic distances, translating or rotating the molecule does not change Coulomb matrix.
+Reordering the atoms permutes the rows and columns of the matrix.
+The matrix itself is therefore not invariant to atom ordering, but its \keypoint{sorted eigenspectrum} is:
+
+\begin{equation}
+    \mathbf{λ} = (λ_1,λ_2,\ldots,λ_N) 
+    \qquad 
+    \textrm{where} 
+    \qquad 
+    λ_1\geqλ_2\geq\cdots\geqλ_N.
+\end{equation}
+
+\begin{warningbox} 
+    \textbf{Invariant does not mean unique:} 
+    the Coulomb matrix eigenspectrum removes dependence on molecular orientation and atom ordering, but different molecular structures can share the same eigenspectrum.
+    It is, therefore, not necessarily a unique molecular identifier. 
+\end{warningbox}
+
+Consider a water molecule with the following Cartesian coordinates (in \(\si{\angstrom}\)): 
+
+\begin{center}
+    \begin{tabular}{crrr} 
+        \toprule 
+        Atom & \(x\) & \(y\) & \(z\) \\
+        \midrule 
+        O & 0.0000 & 0.0000 & 0.0000 \\ 
+        H & 0.9572 & 0.0000 & 0.0000 \\ 
+        H & -0.2400 & 0.9273 & 0.0000 \\ 
+        \bottomrule
+    \end{tabular} 
+\end{center} 
+
+
+\solution{18cm}{ 
+    Using \(Z_{\mathrm{O}}=8\) and \(Z_{\mathrm{H}}=1\).
+    \\[3em]
+    The interatomic distances are approximately 
+    
+    \[ r_{\mathrm{OH_1}} = 0.9572~\si{\angstrom}, \qquad r_{\mathrm{OH_2}} = 0.9578~\si{\angstrom}, \qquad r_{\mathrm{H_1H_2}} = 1.514~\si{\angstrom}. \] 
+    
+    The diagonal oxygen term is 
+    
+    \[ C_{\mathrm{OO}} = \frac{1}{2}(8)^{2.4} = 73.517, \] 
+    
+    while each hydrogen diagonal term is 
+    
+    \[ C_{\mathrm{HH}} = \frac{1}{2}(1)^{2.4} = 0.500. \] The resulting Coulomb matrix is approximately \[ \mathbf{C} = \begin{pmatrix} 73.517 & 8.358 & 8.352 \\ 8.358 & 0.500 & 0.660 \\ 8.352 & 0.660 & 0.500 \end{pmatrix}. \] 
+
+    The eigenvalues are the values of \(λ\) satisfying \[ \det(\mathbf C-λ\mathbf I)=0. \]
+    
+    Its eigenvalues, sorted from largest to smallest, are 
+    
+    \[ \boldsymbol{\lambda} = \begin{pmatrix} 75.397\\ -0.160\\ -0.720 \end{pmatrix}. \] 
+}
+
+\section{Molecules as graphs} 
+
+Three-dimensional representations are essential when the geometry of a molecule matters.
+For many chemical problems, however, we are primarily interested in which atoms are connected to which (\keypoint{molecular topology}).
+This motivates representing a molecule as a \keypoint{molecular graph} (Fig.~\ref{fig1-3:proline-graph}).
+
+A mathematical graph consists of a collection of \keypoint{vertices} connected by \keypoint{edges}.
+Molecular structure maps naturally onto this representation: atoms become vertices and bonds become edges.
+A molecular graph can contain more information than connectivity alone.
+Properties can be attached to both atoms and bonds.
+Such a graph is sometimes described as an \keypoint{attributed graph}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    vertex/.style={
+        circle,
+        draw=darkBlue,
+        fill=paleBlue,
+        minimum size=9mm,
+        inner sep=1pt,
+        font=\sffamily\bfseries,
+        line width=1.5pt
+    },
+    edge/.style={
+        draw=darkGrey,
+        line width=2pt
+    },
+    doubleedge/.style={
+        draw=darkGrey,
+        double,
+        double distance=2.4pt,
+        line width=2pt
+    },
+    index/.style={
+        font=\small\sffamily,
+        text=darkGrey
+    }
+    ]
+
+    % Proline pyrrolidine ring arranged as a regular-looking pentagon
+    \node[vertex] (N)  at (0,1.65) {N};
+    \node[vertex] (Ca) at (1.57,0.51) {C};
+    \node[vertex] (Cb) at (0.97,-1.34) {C};
+    \node[vertex] (Cg) at (-0.97,-1.34) {C};
+    \node[vertex] (Cd) at (-1.57,0.51) {C};
+
+    % Carboxylic acid attached to alpha carbon
+    \node[vertex] (Cc) at (3.25,1.10) {C};
+    \node[vertex] (O1) at (4.45,2.20) {O};
+    \node[vertex] (O2) at (4.75,0.35) {O};
+
+    % Curved pyrrolidine ring edges
+    \draw[edge] (N) to[bend left=7] (Ca);
+    \draw[edge] (Ca) to[bend left=7] (Cb);
+    \draw[edge] (Cb) to[bend left=7] (Cg);
+    \draw[edge] (Cg) to[bend left=7] (Cd);
+    \draw[edge] (Cd) to[bend left=7] (N);
+
+    % Curved carboxylic acid edges
+    \draw[edge] (Ca) to[bend left=6] (Cc);
+    \draw[doubleedge] (Cc) to[bend left=7] (O1);
+    \draw[edge] (Cc) to[bend right=7] (O2);
+
+    % Arbitrary graph indices
+    \node[index,above=1mm of N] {1};
+    \node[index,right=1mm of Ca] {2};
+    \node[index,right=1mm of Cb] {3};
+    \node[index,below=1mm of Cg] {4};
+    \node[index,left=1mm of Cd] {5};
+    \node[index,above=1mm of Cc] {6};
+    \node[index,above=1mm of O1] {7};
+    \node[index,right=1mm of O2] {8};
+
+\end{tikzpicture}
+
+\caption{
+    Hydrogen-suppressed molecular graph of proline.
+    Atomic identity is represented as a vertex attribute and bond order as an edge attribute.
+    The numerical vertex indices are arbitrary.
+}
+\label{fig1-3:proline-graph}
+\end{figure}
+
+Once the vertices of a molecular graph have been assigned indices, the connectivity of the graph can itself be represented numerically.
+For a simple, unweighted molecular graph, the \keypoint{adjacency matrix} \(\mathbf{A}\) is defined as
+\mnote{We could define different numerical values for edge attributes.}
+
+\begin{equation} 
+    A_{ij} = \begin{cases} 
+        1, & \text{if vertices } i \text{ and } j \text{ are connected},\\ 
+        0, & \text{otherwise}. 
+    \end{cases} 
+\end{equation}
+
+\solution{6cm}{
+    \[ \mathbf{A} = \begin{pmatrix} 0 & 1 & 0 & 0 & 1 & 0 & 0 & 0 \\ 1 & 0 & 1 & 0 & 0 & 1 & 0 & 0 \\ 0 & 1 & 0 & 1 & 0 & 0 & 0 & 0 \\ 0 & 0 & 1 & 0 & 1 & 0 & 0 & 0 \\ 1 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\ 0 & 1 & 0 & 0 & 0 & 0 & 1 & 1 \\ 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \end{pmatrix}. \] 
+}
+
+\section{Line notations}
+
+Molecular graphs provide a convenient abstract representation of chemical connectivity, but explicitly storing and displaying a graph is not always practical.
+An alternative is to encode the molecular graph as a sequence of characters. Such \keypoint{line representations} allow molecular structures to be stored, searched and exchanged using ordinary text.
+The most widely encountered example is the \keypoint{S}implified \keypoint{M}olecular \keypoint{I}nput \keypoint{L}ine \keypoint{E}ntry \keypoint{S}ystem, or \keypoint{SMILES}.\mcite{Weininger1988}
+
+\subsection{SMILES syntax}
+
+Atoms are represented using their element symbols.
+Adjacent atoms in the string are connected by a bond.
+Hydrogen atoms attached to typical organic atoms are normally omitted and inferred from standard valence rules.
+Single bonds are normally omitted, so for ethanol: 
+\begin{equation} 
+    \ce{C-C-O} \qquad\longrightarrow\qquad \texttt{CCO} 
+\end{equation} 
+Double and triple bonds are written explicitly using an equals sign (\texttt{O=C=O} is carbon dioxide) and a hash symbol (\texttt{C\#C} is acetylene).
+A branch in the molecular graph is written inside parentheses following the atom (\texttt{CC(=O)N} is acetamide).
+
+\solution{12.5cm}{
+    \centering
+    \includegraphics[width=8cm]{figures/CH1-smiles-1.png}
+}
+
+A cyclic molecular graph cannot be represented simply by walking along a sequence of atoms without eventually reconnecting two vertices. 
+SMILES indicates this \keypoint{ring closure} using matching numerical labels.
+Aromatic atoms can be represented either as Kekulé structure or with lower-case letters.
+
+\begin{warningbox} 
+    \keypoint{The ring number does not represent an atom.} 
+    Matching ring labels indicate the edge connecting two atoms encountered during the graph traversal.
+\end{warningbox}
+
+\solution{8cm}{
+    \centering
+    \includegraphics[width=8cm]{figures/CH1-smiles-2.png}
+}
+
+A molecular graph can usually be traversed in more than one way.
+Consequently, a single molecule can have multiple valid SMILES representations.
+
+\solution{8cm}{
+    \centering
+    \includegraphics[width=8cm]{figures/CH1-smiles-3.png}
+}
+
+For database searching and comparison, having many valid strings for the same molecular graph is inconvenient.
+A \keypoint{canonicalisation algorithm} assigns a reproducible ordering to the graph and generates a corresponding canonical SMILES.
+
+\begin{warningbox} 
+    \keypoint{Canonical does not mean universal.} 
+    Canonical SMILES are generated algorithmically. 
+    Different software packages can employ different canonicalisation procedures, so the same molecule need not have one universally defined canonical SMILES.
+    These can even vary between software versions!
+\end{warningbox}
+
+Several related line notations extend or modify the ideas used in SMILES. 
+\keypoint{SMARTS} describes a molecular pattern rather than one specific molecule.\mcite{DaylightSMARTS} 
+It is used for substructure searching, allowing questions such as whether a molecule contains an alcohol, amide or aromatic nitrogen atom.
+\keypoint{SMIRKS} encodes a chemical transformation by specifying patterns in the reactants and the corresponding patterns in the products. 
+\keypoint{SELFIES} is a string representation designed so that every valid SELFIES string corresponds to a molecular graph permitted by its underlying rules.\mcite{Krenn2020} 
+This makes SELFIES useful in generative machine learning, where arbitrary modification of a SMILES will often produce an invalid structure.
+
+\section{Identifiers and chemical records}
+
+SMILES strings can also contain special characters that are inconvenient when structures are passed between different pieces of software or used as search terms.
+More fundamentally, the existence of multiple valid SMILES representations makes them inconvenient as universal chemical identifiers for cross-referencing structures from different sources.
+For searching databases and linking chemical information between different sources, it is useful to have a standardised molecular identifier.
+
+\subsection{The International Chemical Identifier (InChI)}
+
+To address these problems, IUPAC developed the \keypoint{International Chemical Identifier (InChI)}.\mcite{Heller2015}
+InChI is a structure-based, non-proprietary, open-source, and standardised identifier in which different types of chemical information are organised hierarchically into layers. 
+This makes InChI particularly useful when chemical information from different sources needs to be linked or incorporated into \keypoint{FAIR} (\keypoint{f}indable, \keypoint{a}ccessible, \keypoint{i}nteroperable, and \keypoint{r}eusable) datasets.
+
+\begin{conceptbox}
+    \keypoint{An InChI is organised into layers of chemical information.} 
+    An InChI begins with a version identifier and molecular formula, followed by additional layers describing features such as connectivity, hydrogen atoms, charge, stereochemistry, and isotopic composition.
+    Layers are included only where the corresponding information is required to describe the structure.
+\end{conceptbox}
+
+The ability to read and parse InChI by humans was of little importance to the developers.
+You are not expected to construct an InChI manually. 
+You should, however, be able to recognise the organisation of an InChI and identify where important types of chemical information are stored (Fig.~\ref{fig1-4:inchi}).
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{figures/CH1-inchi-1.png}
+    \caption{An example chemical structure with its corresponding InChI. Note how each layer gives more and more chemical information.}
+    \label{fig1-4:inchi}
+\end{figure}
+
+\subsection{Search engines and indexing}
+
+Although InChIs provide standardised identifiers, they can have varying lengths and contain characters that are inconvenient for search engines, database indexing and filenames.
+For this reason, a second identifier, the \keypoint{InChIKey}, can be generated from the InChI.
+An InChIKey is a hash of an InChI that produces a compact 27-character identifier containing uppercase letters and hyphens (Fig.~\ref{fig1-5:inchikey}).
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=12.5cm]{figures/CH1-inchikey.png}
+    \caption{Different molecular representations of the same molecule: non-unique SMILES, standardised InChIn and its corresponding InChIKey.}
+    \label{fig1-5:inchikey}
+\end{figure}
+
+\begin{warningbox}
+    Hashing is a one-way operation. 
+    The same InChI will reproducibly generate the same InChIKey, but it is not possible to recover the complete molecular structure from the InChIKey alone.
+    While they are convenient filenames, it is wise keep a \enquote{dictionary} mapping them to structural information.
+\end{warningbox}
+
+The InChIKey is divided into blocks. 
+The first block represents information associated primarily with the connectivity, while subsequent parts encode information associated with stereochemistry, isotopic composition and protonation.
+
+\solution{8cm}{
+    \includegraphics[width=12.5cm]{figures/CH1-inchikey-chiral.png}
+}
+
+Compressing an InChI into a much shorter InChIKey necessarily loses information.
+This creates the possibility of a \emph{hash collision}, in which different InChIs generate the same InChIKey.
+While the \texttt{SHA-256 hash} was chosen to minimise collisions of InChIKeys, they are still possible -- especially for large structures. 
+Consider two diastereomers of Spongistatin I, a molecule with 26 stereocentres, which have different InChI but the same InChIKey (Fig.~\ref{fig1-6:inchikey-collision}).
+Such collisions are incredibly rare, but it is prudent to check they have not happened in our datasets!
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{figures/CH1-inchikey-collision.png}
+    \caption{Two diastereomers of Spongistatin I with the same InChIKey.}
+    \label{fig1-6:inchikey-collision}
+\end{figure}
+
+\section{Bit vectors and molecular fingerprints}
+
+So far, we have considered representations that aim to describe or identify a molecular structure. 
+For many cheminformatics applications, however, we do not need to reconstruct the complete structure of a molecule. 
+Instead, we may want to answer much simpler questions: does a particular structural feature occur in the molecule, and how similar is one molecule to another?
+For these tasks, it is useful to convert molecular structures into compact numerical representations known as \keypoint{molecular fingerprints}.
+
+A \keypoint{bit vector} is a one-dimensional array containing zeros and ones, for example,
+
+\begin{equation} 
+    \mathbf{x} = (0,0,1,1,0,1). 
+\end{equation}
+
+Each position, or \emph{bit}, can be used to record the presence or absence of some feature of a higher-dimensional object such as a molecule.
+This might initially seem an unnecessarily crude way of representing chemical structure. 
+However, identifying and comparing substructures directly across very large molecular databases can be computationally expensive.
+Once molecules have been converted into bit vectors, computers can compare their patterns of zeros and ones extremely efficiently.
+
+\begin{conceptbox} 
+    \keypoint{Molecular fingerprints trade detail for computational efficiency.}
+    A molecular fingerprint encodes selected features of a molecular structure in a compact numerical form. 
+    It is generally not possible to reconstruct the complete molecular structure from the fingerprint.
+\end{conceptbox}
+
+\subsection{Structural keys}
+
+One simple way to construct a such a bit vector is to define a fixed list of yes/no structural questions. 
+Each question is assigned a position in the bit vector, and the corresponding bit is switched on if the feature is present.
+A very simple list of such structural questions could be:
+\begin{itemize} 
+    \item does the molecule contain oxygen? 
+    \item does it contain a ring? 
+    \item does it contain an aromatic atom? 
+    \item does it contain a six-membered ring? 
+    \item does it contain a carbonyl group? 
+\end{itemize}
+
+\begin{methodbox} \keypoint{A structural-key fingerprint asks a predefined set of questions about a molecule.}
+Each structural feature is associated with a particular bit:
+\begin{equation*} 
+    \begin{aligned} 
+        \text{feature absent} &\longrightarrow 0 \\ 
+        \text{feature present} &\longrightarrow 1
+    \end{aligned} 
+\end{equation*}
+
+Two molecules sharing many of the encoded structural features will consequently share many \enquote{on} bits, which can be cheaply compared.
+\end{methodbox}
+
+One widely used example is the \keypoint{M}olecular \keypoint{ACC}ess \keypoint{S}ystem (\keypoint{MACCS}) structural key fingerprint.\mcite{Durant2002}
+MACCS keys use a predefined collection of 167 (of which one is not implemented) structural patterns intended to summarise useful information about molecular structure (Fig.~\ref{fig1-7:maccs}).
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/CH1-maccs.png}
+    \caption{Example MACCS keys for a simple organic molecule.}
+    \label{fig1-7:maccs}
+\end{figure}
+
+Someone must decide in advance which structural patterns are worth encoding. 
+A set of keys designed for one region of chemistry may fail to capture the structural distinctions that matter in another.
+
+\subsection{Circular fingerprints}
+
+Rather than deciding in advance which structural patterns are important, we can generate features directly from the molecular graph.
+\keypoint{Circular fingerprints} describe the local environment surrounding each atom and progressively expand that environment through neighbouring atoms:
+\begin{enumerate} 
+    \item assign an initial identifier to each atom; 
+    \item identify the neighbouring atoms and bonds; 
+    \item combine this information to describe larger local environments; 
+    \item convert each environment into a numerical identifier; 
+    \item encode the resulting identifiers in a fingerprint. 
+\end{enumerate}
+The size of an atomic environment is described by its \keypoint{radius}. 
+At radius 0, the environment describes the atom itself. 
+Radius 1 additionally includes directly bonded neighbours, radius 2 extends to the next shell of atoms, and so forth (Fig.~\ref{fig1-8:morgan}).
+Increasing the radius incorporates progressively more of the local molecular environment surrounding each atom.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/CH1-morgan-1.pdf}
+    \caption{Conceptual representation of a circular fingerprint.}
+    \label{fig1-8:morgan}
+\end{figure}
+
+One of the most widely used approaches to circular fingerprints derives from the Morgan algorithm introduced by the Chemical Abstracts Society (CAS).\mcite{Morgan1965}
+A more recent development of this idea is the \keypoint{Extended-Connectivity Fingerprint (ECFP)}.\mcite{Rogers2010}
+For each atom, the algorithm generates identifiers describing its local molecular environments.
+These identifiers can then be \keypoint{hashed}: a numerical operation converts an identifier into an integer, which can subsequently be mapped onto a position in a fingerprint of fixed length through modulo division (Fig.~\ref{fig1-8:morgan-2}).
+If the same structural environment occurs in another molecule, the same procedure generates the same identifier and therefore maps to the same position in the fingerprint.
+Different substructures can give rise to the same bits, so while a fingerprint can easily confirm the absence of a substructure, it does not indicate any certainty that the substructure is indeed present.
+These \keypoint{hash collisions} is what you see in spurious substructures in CAS~SciFinder.
+
+\begin{conceptbox} 
+    \keypoint{Morgan fingerprints describe which local molecular environments occur within a molecular graph.}
+    Unlike predefined structural keys, those environments do not need to be chosen before the molecules are analysed, making circular fingerprints useful across a wide range of chemical datasets.
+\end{conceptbox}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{figures/CH1-morgan-2.png}
+    \caption{
+        Generation of an ECFP fingerprint with contributions from environments up to radius one. 
+        Bits activated by each environment are based on the hashing function.
+    }
+    \label{fig1-8:morgan-2}
+\end{figure}
+
+A binary fingerprint records only whether a feature occurs:
+\begin{equation} 
+    x_i\in{0,1}. 
+\end{equation}
+An alternative is a \keypoint{count fingerprint}, in which each position records how many times a feature occurs within the molecule:
+\begin{equation} 
+    x_i\in{0,1,2,\ldots}. 
+\end{equation}
+Count fingerprints therefore retain information that is deliberately discarded when a bit is simply switched on.
+Extended-connectivity fingerprints normally distinguish atomic environments using atom-specific information. 
+A related representation, the \keypoint{Functional-Class Fingerprint (FCFP)}, instead groups atoms according to chemically relevant roles, such as hydrogen-bond donor or acceptor, aromatic character, or membership of broader functional classes.
+
+\section{Summary}
+
+In this chapter, we have seen that a molecule can be represented digitally in many different ways, and that \keypoint{there is no universally \enquote{best} molecular representation}.
+Instead, the appropriate representation depends on the chemical information that must be retained and the task we want to perform.
+Cartesian coordinates provide detailed information about \keypoint{molecular geometry}, while molecular graphs abstract a structure into its \keypoint{atoms and connectivity}.
+Line representations such as SMILES provide a compact way of encoding molecular graphs as text, while InChI and InChIKey provide standardised approaches to \keypoint{chemical identification and data interoperability}.
+Finally, molecular fingerprints deliberately discard some structural information to produce compact numerical representations that are efficient to store and compare.
+These representations therefore illustrate a recurring theme in digital chemistry: \keypoint{the choice of representation determines which chemical information is made explicit, which information is hidden, and which information is lost}.
+Having learnt how to represent individual molecules, we can now ask a different question: if molecules are represented computationally, \keypoint{how can we decide how similar or different they are?}
+Answering this question takes us from individual molecular representations to the organisation and exploration of the \keypoint{chemical space}.
+

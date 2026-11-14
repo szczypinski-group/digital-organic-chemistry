@@ -1,0 +1,39 @@
+\documentclass[11pt,twoside]{report}
+
+\usepackage{fts-report}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usetikzlibrary{positioning, matrix, calc}
+\usetikzlibrary{arrows.meta}
+
+\title{2026 Digital Chemistry}
+\author{F. T. Szczypiński}
+\date{Michaelmas Term 2026}
+
+\addbibresource{refs.bib}
+
+% Student version: leave gaps blank
+% \solutionsfalse
+% Lecturer version: display worked answers
+\solutionsfalse
+
+\begin{document}
+\include{title}
+\tableofcontents
+
+\raggedbottom
+
+% \include{chapters/00-course-introduction}
+\include{chapters/01-translating-molecules}
+\include{chapters/02-machine-learning}
+\include{chapters/03-reaction-mechanisms}
+\include{chapters/04-chemical-space}
+% \include{chapters/05-molecular-descriptors}
+% \include{chapters/06-reaction-optimisation}
+% \include{chapters/07-high-throughput-flow}
+% \include{chapters/08-autonomous-laboratories}
+% \include{chapters/09-rdkit-workshop}
+% \include{chapters/10-revision-class}
+
+\printbibliography
+\end{document}

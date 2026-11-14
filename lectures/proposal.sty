@@ -1,0 +1,167 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{proposal}[2026/04/10 Grant proposal style (tight-spacing)]
+
+\RequirePackage{fts}
+
+% -----------------------
+% GEOMETRY
+% -----------------------
+
+\RequirePackage[
+    a4paper,
+    hmargin=1.2cm,
+    top=1.5cm,
+    bottom=1.5cm,
+    footskip=0.8cm,
+    headsep=0.3cm,
+    nomarginpar,
+]{geometry}
+
+% -----------------------
+% BIBLIOGRAPHY
+% -----------------------
+
+\RequirePackage[hidelinks]{hyperref}
+\ExecuteBibliographyOptions{maxnames=1}
+
+% -----------------------
+% HEADER / FOOTER
+% -----------------------
+\RequirePackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+\AtBeginDocument{%
+    \fancyhead[L]{\sffamily\small\textbf{\@title}}
+    \fancyhead[R]{\sffamily\small\textbf{\@author}}
+    \fancyfoot[L]{\sffamily\small Durham University}
+    \fancyfoot[C]{\sffamily\small\thepage}
+    \fancyfoot[R]{\sffamily\small\@date}
+}
+
+% -----------------------
+% SECTION FORMATTING
+% -----------------------
+
+\RequirePackage{titlesec}
+
+% SECTION
+\titleformat{\section}
+{\bfseries\sffamily}
+{\thesection.}{0.3em}{}
+
+% SUBSECTION
+\titleformat{\subsection}
+{\bfseries\sffamily}
+{\thesubsection.}{0.3em}{}
+
+% SUBSUBSECTION
+\titleformat{\subsubsection}
+{\bfseries\sffamily}
+{\thesubsubsection.}{0.3em}{}
+
+\titlespacing*{\section}{0pt}{0.2em}{0.2em}
+\titlespacing*{\subsection}{0pt}{0.2em}{0.1em}
+\titlespacing*{\subsubsection}{0pt}{0.2em}{0.1em}
+
+% -----------------------
+% GRAPHICS + FLOATS
+% -----------------------
+
+\setlength{\textfloatsep}{6pt}
+\setlength{\floatsep}{4pt}
+\setlength{\intextsep}{4pt}
+\linespread{1}
+
+% -----------------------
+% CAPTIONS
+% -----------------------
+
+\captionsetup{
+    skip=0.5em
+}
+
+\captionsetup[listing]{
+    position=bottom,
+    skip=-0.5em
+}
+
+% -----------------------
+% COMPACT LISTS
+% -----------------------
+
+\RequirePackage{enumitem}
+
+\setlist{
+    itemsep=0.15em,
+    topsep=0.2em,
+    parsep=0pt,
+    partopsep=0pt
+}
+
+% -----------------------
+% COMPACT BOXES
+% -----------------------
+
+\tcbset{common/.style={
+            enhanced,
+            frame hidden,
+            boxrule=0pt,
+            enhanced jigsaw,
+            arc=0mm,
+            sharp corners,
+            valign=center,
+            left=2mm,
+            right=2mm,
+            top=0.5mm,
+            bottom=0mm,
+            before skip=1mm,
+            after skip=1mm,
+        },
+}
+
+% -----------------------
+% SUMMARY BIBLIOGRAPHY
+% -----------------------
+
+\newtoggle{firstentry}
+\newtoggle{summarybibmode}
+\defbibenvironment{summarybib}
+{\noindent\sloppy\toggletrue{firstentry}%
+    \setlength{\leftskip}{0pt}%
+    \setlength{\parindent}{0pt}%
+    \ignorespaces}
+{\unspace.}
+{}
+
+
+\DeclareBibliographyDriver{article}{%
+    \iftoggle{firstentry}
+    {\global\togglefalse{firstentry}}
+    {\addsemicolon\space}%
+    %
+    \iffieldundef{doi}
+    {%
+        \textbf{\printfield{labelnumber}}\addspace
+        \printnames{labelname}\addspace
+        \printfield{journaltitle}\space(\printfield{year})%
+    }
+    {%
+        \href{https://doi.org/\thefield{doi}}{%
+            \textbf{\printfield{labelnumber}}\addspace
+            \printnames{labelname}\addspace
+            \printfield{journaltitle}\space(\printfield{year})%
+        }%
+    }%
+}
+
+\DeclareCiteCommand{\summarycite}
+{}
+{%
+    \textbf{\printfield{labelnumber}} %
+    \printnames{labelname} %
+    \printfield{journaltitle} (\printfield{year})%
+}
+{;\space}
+{}

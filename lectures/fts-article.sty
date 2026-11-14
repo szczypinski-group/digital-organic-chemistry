@@ -1,0 +1,128 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{fts-article}[2026/06/18 Article-like style.]
+
+\RequirePackage{fts}
+
+% -----------------------
+% GEOMETRY
+% -----------------------
+\RequirePackage[
+    a4paper,
+    left=1.95cm,
+    right=1.95cm,
+    top=2.0cm,
+    bottom=2.0cm,
+    headsep=8pt,
+    columnsep=0.5cm
+]{geometry}
+
+
+% -----------------------
+% BIBLIOGRAPHY
+% -----------------------
+
+\RequirePackage[hidelinks]{hyperref}
+% \ExecuteBibliographyOptions{maxnames=1}
+
+% -----------------------
+% HEADER / FOOTER
+% -----------------------
+
+\RequirePackage{fancyhdr}
+
+\newcommand{\@theTitle}{}
+\newcommand{\@theAuthor}{}
+\newcommand{\@theDate}{}
+
+\renewcommand{\title}[1]{\gdef\@title{#1}\gdef\@theTitle{#1}}
+\renewcommand{\author}[1]{\gdef\@author{#1}\gdef\@theAuthor{#1}}
+\renewcommand{\date}[1]{\gdef\@date{#1}\gdef\@theDate{#1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+\fancyhead[L]{\sffamily\small\textbf{\@theAuthor}}
+\fancyhead[R]{\sffamily\small\textbf{\@theDate}}
+\fancyfoot[C]{\sffamily\small\thepage}
+
+
+% -----------------------
+% SECTION FORMATTING
+% -----------------------
+
+\RequirePackage{titlesec}
+
+% SECTION
+\titleformat{\section}
+{\bfseries\sffamily\large}
+{\thesection.}{0.6em}{}
+
+% SUBSECTION
+\titleformat{\subsection}
+{\bfseries\sffamily}
+{\thesubsection.}{0.6em}{}
+
+% SUBSUBSECTION
+\titleformat{\subsubsection}
+{\bfseries\sffamily}
+{\thesubsubsection.}{0.6em}{}
+%
+\titlespacing*{\section}{0pt}{1em}{0.6em}
+\titlespacing*{\subsection}{0pt}{0.6em}{0.4em}
+
+% -----------------------
+% GRAPHICS + FLOATS
+% -----------------------
+
+% \setlength{\textfloatsep}{6pt}
+% \setlength{\floatsep}{4pt}
+% \setlength{\intextsep}{4pt}
+
+% -----------------------
+% CAPTIONS
+% -----------------------
+
+\captionsetup{
+    skip=0.8em
+}
+
+\captionsetup[listing]{
+    position=bottom,
+    skip=-0.2em
+}
+
+% -----------------------
+% COMPACT LISTS
+% -----------------------
+
+\RequirePackage{enumitem}
+
+\setlist{
+    itemsep=0.15em,
+    topsep=0.2em,
+    parsep=0pt,
+    partopsep=0pt
+}
+
+% -----------------------
+% COMPACT BOXES
+% -----------------------
+
+\tcbset{common/.style={
+            enhanced,
+            frame hidden,
+            boxrule=0pt,
+            enhanced jigsaw,
+            arc=0mm,
+            sharp corners,
+            valign=center,
+            left=2mm,
+            right=2mm,
+            top=1.5mm,
+            bottom=1mm,
+%             before skip=4mm,
+%             after skip=4mm,
+        },
+}
+
+

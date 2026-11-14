@@ -1,0 +1,2015 @@
+% !TeX root = ../notes.tex
+
+\chapter{Machine learning for chemistry}
+
+\begin{notebox}
+  \keypoint{What do you need to learn from this chapter?}
+  This chapter introduces the language and basic ideas of machine learning that will be used throughout the remainder of the course.
+  You are \keypoint{not} expected to derive machine-learning algorithms, implement the models discussed here, or reproduce their mathematical details in the exam.
+  You should instead understand the \keypoint{conceptual vocabulary}: what features and targets are, the difference between regression and classification, what it means to train and test a model, and why ideas such as overfitting and extrapolation matter when interpreting chemical models.
+  Later chapters will use these concepts to address chemical questions.
+\end{notebox}
+
+\section{Learning relationships from data}
+
+Machine learning (ML) has become increasingly common across chemistry, from predicting molecular properties and reaction outcomes to selecting experiments and controlling automated laboratories.\mcite{Butler2018,Keith2021}
+Despite the terminology, many of the underlying ideas should already be familiar to chemists: we collect observations, identify variables that might explain them, construct a model, and ask whether that model can describe or predict chemical behaviour.
+The principal difference is often one of \keypoint{scale}.
+Rather than considering a single relationship between two variables, machine-learning methods can identify relationships within datasets containing many observations and many molecular or experimental variables
+
+Consider a dataset in which each row represents a chemical reaction.
+For every reaction, we might record information about the substrates, catalyst, solvent, temperature, concentration, and measured reaction outcome.
+Some of these quantities can be provided to a model as inputs, while another quantity can be treated as the value that we would like the model to predict.
+An \keypoint{observation} is one example in a dataset.
+In chemistry this might be one molecule, one reaction, or one experiment.
+A \keypoint{feature} is an input variable used to describe an observation.
+Examples might include temperature, Hammett parameters, catalyst loading, or solvent properties.
+A \keypoint{target} is the quantity that we want the model to predict, such as a reaction rate, selectivity, or yield.
+\keypoint{Training} is the process by which a model learns a relationship between features and a target from existing data.
+\keypoint{Prediction} uses the resulting model to estimate the target for new observations.
+
+The terminology is relatively new to many chemists, but the underlying idea is not.
+A physical-organic relationship such as a Hammett correlation also relates a numerical description of molecular structure to an experimentally observed chemical quantity.
+Before constructing any model we must decide what constitutes an observation, which chemical information should be supplied as features, and which experimentally meaningful quantity should be treated as the target.
+Later in this course, we will see how this idea can be extended to many molecular descriptors and more complicated chemical relationships.
+
+\section{Types of machine-learning problem}
+
+Machine-learning problems can be divided into several broad classes according to the information available during training and the type of question being asked.
+
+\subsection{Supervised learning}
+
+In \keypoint{supervised learning}, the training data contain both the features describing each observation and the correct value or label that the model is intended to learn (Fig.~\ref{fig2-1:supervised-learning}).
+For example, we might provide a model with molecular and experimental features for a collection of reactions together with the experimentally measured selectivity of each reaction.
+The model attempts to learn a relationship between these inputs and outputs that can subsequently be applied to new reactions.
+
+Two important supervised-learning problems are \keypoint{regression} and \keypoint{classification}.
+Regression is used when the target is a \keypoint{continuous numerical quantity}.
+Chemical examples might include:
+
+\begin{itemize}
+  \item reaction rate;
+  \item activation free energy, \(ΔG^\ddagger\);
+  \item selectivity, \(ΔΔG^\ddagger\);
+  \item a molecular property;
+  \item percentage yield.
+\end{itemize}
+
+Classification is used when the target belongs to one of a set of \keypoint{discrete categories}.
+For example, reactions might be classified as reactive or unreactive, or a chemical sample might be assigned to one of several predefined classes.
+Converting a continuous chemical measurement into categories inevitably discards information.
+For example, dividing reactions into \enquote{high yield} and \enquote{low yield} requires an arbitrary boundary.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        box/.style={
+          draw=darkBlue,
+          fill=paleBlue,
+          line width=2.0pt,
+          minimum width=5cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        model/.style={
+          draw=darkRed,
+          fill=paleRed,
+          line width=2.0pt,
+          minimum width=5cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        result/.style={
+          draw=darkGreen,
+          fill=paleGreen,
+          line width=2.0pt,
+          minimum width=5cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        arrow/.style={
+          ->,
+          >=Stealth,
+          draw=darkGrey,
+          line width=2.5pt
+        }
+      ]
+
+      % Fix the natural width so that both figures receive the same
+      % scaling factor when resized to \linewidth.
+      \path[use as bounding box] (0,-1.9) rectangle (17.3,3.8);
+
+      \node[box] (training) at (2.5,3)
+      {
+        \textbf{Training data}\\
+        features + known target
+      };
+
+      \node[model] (algorithm) at (8.65,3)
+      {
+        \textbf{ML algorithm}
+      };
+
+      \node[result] (model) at (8.65,0)
+      {
+        \textbf{Trained model}
+      };
+
+      \node[box] (new) at (2.5,0)
+      {
+        \textbf{New data}\\
+        features only
+      };
+
+      \node[result] (prediction) at (14.8,0)
+      {
+        \textbf{Predicted target}
+      };
+
+      \draw[arrow] (training) -- (algorithm);
+      \draw[arrow] (algorithm) -- (model);
+      \draw[arrow] (new) -- (model);
+      \draw[arrow] (model) -- (prediction);
+
+      \node[ font=\small\sffamily, text=darkGrey, align=center ] at (2.5,1.7)
+      {
+        \emph{e.g.}, reaction conditions\\
+        + measured selectivity
+      };
+
+      \node[ font=\small\sffamily, text=darkGrey, align=center ] at (2.5,-1.3)
+      {
+        \emph{e.g.}, new substrate, catalyst,\\
+        solvent, and conditions
+      };
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    Schematic representation of supervised learning.
+    A model is trained using observations for which the target is already known, and is subsequently used to predict the target for new data.
+  }
+  \label{fig2-1:supervised-learning}
+\end{figure}
+
+\subsection{Unsupervised learning}
+
+In \keypoint{unsupervised learning}, the data do not contain a known target variable (Fig~\ref{fig2-2:unsupervised-learning}).
+Instead, the objective is to identify structure or relationships within the input data themselves.
+One example is \keypoint{clustering}, in which observations are grouped according to their similarity.
+Another is \keypoint{dimensionality reduction}, in which high-dimensional data are represented using fewer dimensions while attempting to preserve useful structure.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        box/.style={
+          draw=darkBlue,
+          fill=paleBlue,
+          line width=2.0pt,
+          minimum width=5cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        model/.style={
+          draw=darkRed,
+          fill=paleRed,
+          line width=2.0pt,
+          minimum width=5cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        result/.style={
+          draw=darkGreen,
+          fill=paleGreen,
+          line width=2.0pt,
+          minimum width=5cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        arrow/.style={
+          ->,
+          >=Stealth,
+          draw=darkGrey,
+          line width=2.5pt
+        }
+      ]
+
+      % Use the same natural width as the supervised-learning figure.
+      \path[use as bounding box] (0,-2.8) rectangle (17.3,3.9);
+      % DEBUG: show bounding box 
+      % \draw[ red, dashed, line width=1pt ] (0,-2.8) rectangle (17.3,3.9);
+
+      % Top-row conceptual schematic
+      \node[box] (data) at (2.5,3)
+      {
+        \textbf{Unlabelled data}\\
+        features only
+      };
+
+      \node[model] (algorithm) at (8.65,3)
+      {
+        \textbf{ML algorithm}
+      };
+
+      \node[result] (structure) at (14.8,3)
+      {
+        \textbf{Structure}
+      };
+
+      \draw[arrow] (data) -- (algorithm);
+      \draw[arrow] (algorithm) -- (structure);
+
+      \node[ font=\small\sffamily, text=darkGrey, align=center ] at (2.5,1.7)
+      {
+        \emph{e.g.}, molecular descriptors\\
+        for a collection of molecules
+      };
+
+      % Lower-left example: unlabelled observations
+      \draw[darkGrey, line width=1pt]
+      (0,-1.65) rectangle (5,0.95);
+
+      \foreach \x/\y in
+      {
+        0.7/0.35,
+        1.0/-0.05,
+        1.3/0.45,
+        1.5/-0.25,
+        1.8/0.15,
+        3.0/-0.85,
+        3.3/-1.25,
+        3.6/-0.75,
+        3.8/-1.35,
+        4.2/-0.95,
+        3.4/0.45,
+        3.8/0.25,
+        4.1/0.65,
+        4.4/0.15
+      }
+      {
+        \fill[darkBlue] (\x,\y) circle (2.5pt);
+      }
+
+      \node[ font=\small\sffamily, text=darkGrey, align=center ] at (2.5,-2.30)
+      {
+        original observations\\
+        with no assigned classes
+      };
+
+      % Lower-right example: same observations shown as groups
+      \draw[darkGrey, line width=1pt]
+      (12.3,-1.65) rectangle (17.3,0.95);
+
+      \foreach \x/\y in
+      {
+        13.0/0.35,
+        13.3/-0.05,
+        13.6/0.45,
+        13.8/-0.25,
+        14.1/0.15
+      }
+      {
+        \fill[darkRed] (\x,\y) circle (2.5pt);
+      }
+
+      \foreach \x/\y in
+      {
+        15.3/-0.85,
+        15.6/-1.25,
+        15.9/-0.75,
+        16.1/-1.35,
+        16.5/-0.95
+      }
+      {
+        \fill[darkGreen] (\x,\y) circle (2.5pt);
+      }
+
+      \foreach \x/\y in
+      {
+        15.7/0.45,
+        16.1/0.25,
+        16.4/0.65,
+        16.7/0.15
+      }
+      {
+        \fill[darkYellow] (\x,\y) circle (2.5pt);
+      }
+
+      \node[ font=\small\sffamily, text=darkGrey, align=center ] at (14.8,-2.30)
+      {
+        groups identified from\\
+        similarities in the features
+      };
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    Schematic representation of unsupervised learning and clustering.
+    No target or class labels are supplied to the learning algorithm.
+    The lower panels illustrate the same observations before and after grouping according to similarities in their features.
+  }
+  \label{fig2-2:unsupervised-learning}
+\end{figure}
+
+\begin{conceptbox}
+  \keypoint{The key distinction is whether the desired outcome is known during training.}
+  In supervised learning, the model learns a relationship between features and a \keypoint{known target}.
+  In unsupervised learning, no target is supplied and the objective is instead to \keypoint{identify structure} within the features.
+  We will return to unsupervised methods such as clustering and dimensionality reduction when we explore chemical space later in the course.
+\end{conceptbox}
+
+\section{The machine-learning workflow}
+
+Figure~\ref{fig2-3:ml-workflow} shows a simplified workflow for constructing and using a machine-learning model.
+In practice, considerable thought is required before data can be supplied to an algorithm, and choices made during data collection, preprocessing, and evaluation can strongly influence the usefulness of the resulting model.
+The workflow therefore begins with the chemical problem rather than with the selection of a machine-learning algorithm.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        question/.style={
+          draw=darkBlue,
+          fill=paleBlue,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        data/.style={
+          draw=darkBlue,
+          fill=paleBlue,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        process/.style={
+          draw=darkRed,
+          fill=paleRed,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        result/.style={
+          draw=darkGreen,
+          fill=paleGreen,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        arrow/.style={
+          ->,
+          >=Stealth,
+          draw=darkGrey,
+          line width=2.5pt
+        }
+      ]
+
+      % Same horizontal canvas width as the other ML schematics.
+      \path[use as bounding box] (0,-4) rectangle (17.3,8.0);
+      % \draw[ red, dashed, line width=1pt ] (0,-4) rectangle (17.3,8);
+
+      % First row
+      \node[question] (question) at (2.5,7)
+      {
+        \textbf{Chemical question}
+      };
+
+      \node[data] (collection) at (8.65,7)
+      {
+        \textbf{Collect data}\\
+        observations
+      };
+
+      \node[data] (representation) at (14.8,7)
+      {
+        \textbf{Define dataset}\\
+        features + target
+      };
+
+      \draw[arrow] (question) -- (collection);
+      \draw[arrow] (collection) -- (representation);
+
+      % Second row, read from left to right
+      \node[data] (split) at (2.5,0.5)
+      {
+        \textbf{Split dataset}\\
+        train + test
+      };
+
+      \node[process] (train) at (8.65,0.5)
+      {
+        \textbf{Train model}
+      };
+
+      \node[result] (evaluate) at (14.8,0.5)
+      {
+        \textbf{Evaluate model}\\
+        unseen data
+      };
+
+      % Carry the workflow from the end of row one to the beginning of row two.
+      \draw[arrow]
+      (representation.south)
+      -- ++(0,-4.0)
+      -| (split.north);
+
+      \draw[arrow] (split) -- (train);
+      \draw[arrow] (train) -- (evaluate);
+
+      % Final outcome
+      \node[result] (prediction) at (14.8,-3)
+      {
+        \textbf{Predict new chemistry}
+      };
+
+      \draw[arrow] (evaluate) -- (prediction);
+
+      % Short prompts beneath selected stages
+      % \node[
+      %     font=\small\sffamily,
+      %     text=darkGrey,
+      %     align=center
+      % ] at (2.5,3.4) {
+      %     what are we trying\\
+      %     to learn or predict?
+      % };
+
+      % \node[
+      %     font=\small\sffamily,
+      %     text=darkGrey,
+      %     align=center
+      % ] at (14.8,3.4) {
+      %     what information describes\\
+      %     each observation?
+      % };
+
+      % \node[
+      %     font=\small\sffamily,
+      %     text=darkGrey,
+      %     align=center
+      % ] at (2.5,-1.1) {
+      %     keep some observations\\
+      %     separate from training
+      % };
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    A simplified machine-learning workflow for chemistry.
+    The chemical question determines how observations are represented as features and a target.
+    Part of the resulting dataset is used to train a model, while data withheld from training are used to evaluate its ability to make predictions for unseen chemistry.
+  }
+  \label{fig2-3:ml-workflow}
+\end{figure}
+
+\subsection{Chemical question}
+
+The first step is to decide what we want to learn from the available data and whether machine learning is an appropriate way to address the problem.
+Useful questions might involve predicting an experimental outcome, identifying a complicated relationship between molecular structure and reactivity, or reducing the number of experiments or calculations required to investigate a chemical system.
+Defining the problem also determines what constitutes an observation, which information is available to describe it, and what outcome we want the model to predict.
+A useful starting point is therefore to ask whether an existing theoretical, computational, or experimental method already provides the information required, and what additional value a machine-learning model might provide.
+
+\subsection{Collect data}
+
+Machine-learning models learn relationships from collections of observations, so both the quantity and the nature of the available data need to be considered.
+Chemical datasets may be assembled from new experiments, calculations, existing databases, or combinations of these sources.
+Before attempting to construct a model, it is useful to examine the distribution of the measured outcomes and determine whether the observations span the range of chemistry that we are interested in.
+Missing measurements, inconsistent experimental procedures, unsuccessful reactions, and experimental or computational error can all affect the information available to the model.
+Collecting more observations is therefore not necessarily equivalent to collecting more useful chemical information.
+
+\subsection{Define the dataset}
+
+The raw observations must next be converted into a consistent dataset containing the information required by the learning algorithm.
+For supervised learning, each observation is described by a set of \keypoint{features} together with a known \keypoint{target}.
+A reaction dataset might contain features describing molecular structures, solvent, temperature, catalyst loading, or other reaction conditions, while the target could be an experimentally measured quantity such as rate, selectivity, or yield.
+
+Many algorithms require numerical inputs, so categorical data may need to be encoded and molecular structures must be converted into suitable numerical representations.
+Numerical features may also differ greatly in their magnitude or distribution and can require preprocessing before they are supplied to an algorithm.
+The choice of features is particularly important because the model cannot learn from chemical information that is absent from its input data.
+We will return to the selection and interpretation of molecular features when considering molecular descriptors and chemical space later in the course.
+
+\subsection{Split the dataset}
+
+A predictive model should not be evaluated solely using the observations from which it was constructed.
+The available data are therefore commonly separated into \keypoint{training data}, which are used to fit the model, and \keypoint{test data}, which are withheld from model construction and used to assess its performance on unseen observations.
+The amount of data assigned to each subset depends partly on the total amount of information available, which is an important consideration for the relatively small datasets often encountered in chemistry.
+
+During model development, we may also want to compare alternative features, algorithms, or model settings without repeatedly using the test set.
+This can be achieved using separate validation data or through \keypoint{cross-validation}.
+In \(k\)-fold cross-validation, the training data are divided into \(k\) subsets and the model is repeatedly trained on \(k - 1\) subsets and evaluated using the remaining subset.
+Repeating this process allows each subset to contribute to validation while retaining a separate test set for final evaluation.
+
+\begin{warningbox}
+  \keypoint{The test set should remain independent of model development.}
+
+  Using test-set performance repeatedly to make modelling decisions allows information from the test observations to influence the model indirectly and makes the final evaluation less independent.
+\end{warningbox}
+
+\subsection{Train the model}
+
+Training is the process of fitting a model to the training data.
+The machine-learning algorithm attempts to identify a relationship between the supplied features and the known target by adjusting the parameters of the model.
+Different algorithms represent this relationship in different ways and can differ in properties such as interpretability, robustness to unusual observations, and susceptibility to overfitting.
+The choice of algorithm therefore depends on the type and distribution of the data as well as the chemical question being asked.
+
+For the purposes of this course, the mathematical derivation or implementation of these algorithms is not examinable.
+The important point is to understand what information enters a model, what type of relationship it is intended to learn, and how its predictions are subsequently assessed.
+
+\subsection{Evaluate the model}
+
+Once a candidate model has been constructed, its performance must be evaluated using observations that were not used to fit it.
+For supervised learning, this involves comparing the model predictions with known targets and quantifying how closely they agree.
+The appropriate performance measures depend on the type of problem, so regression and classification models are evaluated in different ways.
+
+A model that describes the training observations extremely well may nevertheless perform poorly on unseen observations.
+This behaviour is known as \keypoint{overfitting} and occurs when the model learns features specific to the training data that do not generalise to new examples.
+Increasing the complexity of a model can therefore improve its apparent fit to the training data without improving, and potentially while worsening, its predictive performance.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        axis/.style={
+          draw=darkGrey,
+          line width=1.5pt,
+          ->,
+          >=Stealth
+        },
+        datum/.style={
+          darkBlue,
+          fill=darkBlue
+        },
+        fit/.style={
+          draw=darkRed,
+          line width=2.5pt
+        },
+        title/.style={
+          font=\sffamily\bfseries
+        },
+        label/.style={
+          font=\small\sffamily,
+          text=darkGrey
+        }
+      ]
+
+      \path[use as bounding box] (0,-0.7) rectangle (17.3,5.2);
+
+      % -------------------------
+      % Panel 1: underfitting
+      % -------------------------
+      \draw[axis] (0.5,0.5) -- (5.0,0.5);
+      \draw[axis] (0.5,0.5) -- (0.5,4.3);
+
+      \foreach \x/\y in
+      {
+        0.9/0.9,
+        1.3/1.2,
+        1.7/1.7,
+        2.1/2.5,
+        2.5/3.2,
+        2.9/3.5,
+        3.3/3.2,
+        3.7/2.5,
+        4.1/1.7,
+        4.5/1.2
+      }
+      {
+        \fill[datum] (\x,\y) circle (3pt);
+      }
+
+      \draw[fit] (0.8,1.9) -- (4.7,2.4);
+
+      \node[title] at (2.75,4.8) {Underfitting};
+      \node[label,align=center] at (2.75,-0.15) {model too simple};
+
+      % -------------------------
+      % Panel 2: appropriate fit
+      % -------------------------
+      \draw[axis] (6.4,0.5) -- (10.9,0.5);
+      \draw[axis] (6.4,0.5) -- (6.4,4.3);
+
+      \foreach \x/\y in
+      {
+        6.8/0.9,
+        7.2/1.2,
+        7.6/1.7,
+        8.0/2.5,
+        8.4/3.2,
+        8.8/3.5,
+        9.2/3.2,
+        9.6/2.5,
+        10.0/1.7,
+        10.4/1.2
+      }
+      {
+        \fill[datum] (\x,\y) circle (3pt);
+      }
+
+      \draw[fit]
+      plot[smooth] coordinates
+      {
+        (6.7,0.8)
+        (7.3,1.3)
+        (7.9,2.3)
+        (8.5,3.3)
+        (8.9,3.45)
+        (9.4,2.9)
+        (10.0,1.7)
+        (10.5,1.1)
+      };
+
+      \node[title] at (8.65,4.8) {Appropriate fit};
+      \node[label,align=center] at (8.65,-0.15)
+      {captures the underlying relationship};
+
+      % -------------------------
+      % Panel 3: overfitting
+      % -------------------------
+      \draw[axis] (12.3,0.5) -- (16.8,0.5);
+      \draw[axis] (12.3,0.5) -- (12.3,4.3);
+
+      \foreach \x/\y in
+      {
+        12.7/0.9,
+        13.1/1.2,
+        13.5/1.7,
+        13.9/2.5,
+        14.3/3.2,
+        14.7/3.5,
+        15.1/3.2,
+        15.5/2.5,
+        15.9/1.7,
+        16.3/1.2
+      }
+      {
+        \fill[datum] (\x,\y) circle (3pt);
+      }
+
+      \draw[fit]
+      plot[smooth,tension=0.75] coordinates
+      {
+        (12.65,0.9)
+        (12.9,1.65)
+        (13.1,1.2)
+        (13.3,0.95)
+        (13.5,1.7)
+        (13.7,3.05)
+        (13.9,2.5)
+        (14.15,2.75)
+        (14.3,3.2)
+        (14.55,3.9)
+        (14.7,3.5)
+        (14.9,2.7)
+        (15.1,3.2)
+        (15.3,3.1)
+        (15.5,2.5)
+        (15.7,1.25)
+        (15.9,1.7)
+        (16.1,2.05)
+        (16.3,1.2)
+      };
+
+      \node[title] at (14.55,4.8) {Overfitting};
+      \node[label,align=center] at (14.55,-0.15)
+      {fits details specific to the training data};
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    Schematic illustration of underfitting and overfitting.
+    A model that is too simple fails to capture the underlying relationship, whereas an excessively flexible model can reproduce details specific to the training observations that may not generalise to new data.
+  }
+  \label{fig2-4:overfitting}
+\end{figure}
+
+The location of a new observation relative to the training data is also important.
+\keypoint{Interpolation} describes predictions made within the region represented by the training observations, whereas \keypoint{extrapolation} extends the learnt relationship beyond that region.
+A machine-learning model will generally still return a prediction when asked to extrapolate, but the existence of a numerical prediction does not establish that the prediction is chemically reliable.
+We will return to this problem when considering chemical space, where the relationship between new molecules and the observations represented in a dataset can be examined more explicitly.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        axis/.style={
+          draw=darkGrey,
+          line width=1.5pt,
+          ->,
+          >=Stealth
+        },
+        datum/.style={
+          darkBlue,
+          fill=darkBlue
+        },
+        fit/.style={
+          draw=darkRed,
+          line width=2.5pt
+        },
+        guide/.style={
+          draw=darkGrey,
+          dashed,
+          line width=1.2pt
+        },
+        interp/.style={
+          draw=darkGreen,
+          fill=paleGreen,
+          line width=2pt
+        },
+        extrap/.style={
+          draw=darkYellow,
+          fill=paleYellow,
+          line width=2pt
+        },
+        label/.style={
+          font=\small\sffamily,
+          text=darkGrey,
+          align=center
+        }
+      ]
+
+      \path[use as bounding box] (0.2,-0.8) rectangle (16.6,5);
+      % \draw[ red, dashed, line width=1pt ] (0.2,-0.8) rectangle (16.6,5);
+
+      % Axes
+      \draw[axis] (1.0,0.7) -- (16.6,0.7);
+      \draw[axis] (1.0,0.7) -- (1.0,4.9);
+      \node[ font=\small\sffamily, anchor=north west ] at (1.8,0.55)
+      { feature, $x$ };
+      \node[ font=\small\sffamily, rotate=90, anchor=south west ] at (0.80,1.8)
+      { target, $y$ };
+
+      % Training-data region
+      \fill[paleBlue,opacity=0.55]
+      (3.0,0.72) rectangle (11.0,4.65);
+
+      \draw[guide] (3.0,0.72) -- (3.0,4.65);
+      \draw[guide] (11.0,0.72) -- (11.0,4.65);
+
+      \node[label] at (7.0,4.35) {region represented by training data};
+
+      % Data
+      \foreach \x/\y in
+      {
+        3.4/1.25,
+        4.1/1.55,
+        4.8/1.75,
+        5.6/2.05,
+        6.4/2.35,
+        7.0/2.55,
+        7.8/2.85,
+        8.7/3.05,
+        9.5/3.35,
+        10.4/3.55
+      }
+      {
+        \fill[datum] (\x,\y) circle (3pt);
+      }
+
+      % Fitted relationship and extrapolated continuation
+      \draw[fit] (2.2,0.9) -- (14.8,4.4);
+
+      % Interpolation example
+      \draw[interp] (7.4,2.7) circle (6pt);
+      \draw[guide] (7.4,0.7) -- (7.4,2.7);
+      \node[
+        draw=darkGreen, fill=paleGreen, line width=1.5pt, font=\sffamily,
+        align=center, minimum width=3.2cm, minimum height=0.9cm
+      ]
+      at (7.4,-0.05)
+      {
+        \textbf{Interpolation}
+      };
+
+      % Extrapolation example
+      \draw[extrap] (13.6,4.05) circle (6pt);
+      \draw[guide] (13.6,0.7) -- (13.6,4.05);
+      \node[
+        draw=darkYellow, fill=paleYellow, line width=1.5pt, font=\sffamily,
+        align=center, minimum width=3.2cm, minimum height=0.9cm
+      ]
+      at (13.6,-0.05)
+      {
+        \textbf{Extrapolation}
+      };
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    Schematic comparison of interpolation and extrapolation.
+    Interpolation predicts within the region represented by the training observations, whereas extrapolation extends the learnt relationship beyond that region.
+    A model can still return a numerical prediction during extrapolation, but that prediction may be less reliable.
+  }
+  \label{fig2-5:interpolation-extrapolation}
+\end{figure}
+
+\subsection{Predict new chemistry}
+
+A model that performs satisfactorily during evaluation can be applied to new observations for which the required features are known but the target has not yet been measured.
+For example, a trained model might be supplied with features describing a new combination of substrate, catalyst, solvent, and reaction conditions and used to predict the resulting selectivity or yield.
+The reliability of that prediction depends both on the quality of the model and on how well the new chemistry is represented by the observations used during training.
+
+A predicted value is not equivalent to an experimental measurement, and a useful chemical prediction can ultimately be tested experimentally.
+Once the experimental outcome has been measured, the new observation contains both its features and known target and could contribute to a future dataset.
+Later in the course, we will see how this cycle of prediction, experiment, and data collection can be made systematic through reaction optimisation and automated experimentation.\mcite{Shields2021}
+
+\section{Regression models}
+
+A \keypoint{regression model} predicts a continuous numerical target from one or more input features.
+In chemistry, regression might be used to predict quantities such as reaction rate, activation free energy, selectivity, yield, or a molecular property.
+Many different algorithms can perform regression, and they differ principally in the types of relationships they can represent, the amount of data they require, and how readily their predictions can be interpreted.
+
+\subsection{Linear regression}
+
+The simplest regression model describes a target \(y\) using a linear relationship with a feature \(x\),
+
+\begin{equation}
+  \hat{y} = β_0 + β_1x,
+\end{equation}
+
+where \(\hat{y}\) is the predicted value, \(β_0\) is the intercept, and \(β_1\) describes how the prediction changes with \(x\).
+The hat distinguishes the model prediction, \(\hat{y}\), from the experimentally observed value, \(y\).
+
+This form should already look reasonably familiar to an organic chemist because many relationships used in physical organic chemistry are also linear models.
+For example, the Hammett equation relates a measured reaction parameter to a substituent descriptor through a fitted linear relationship.
+Linear regression is therefore a useful bridge between traditional quantitative physical organic chemistry and modern data-driven modelling.\mcite{Sigman2016}
+
+More than one feature can be included to give a \keypoint{multivariate linear regression} model,
+
+\begin{equation}
+  \hat{y} = β_0 + β_1x_1 + β_2x_2 + \cdots + β_px_p.
+\end{equation}
+
+Each \(x_i\) represents a feature and each \(β_i\) is a fitted coefficient describing its contribution to the prediction.
+The mathematical procedure used to obtain the coefficients is not important for this course; the important idea is that several sources of chemical information can contribute simultaneously to a predicted outcome.
+
+Linear models are attractive because their relatively simple mathematical form can make them straightforward to inspect and interpret.
+Their limitation is equally apparent: a linear model can only represent relationships that are reasonably described by combinations of linear terms.
+
+We will return to multivariate linear models later when considering quantitative structure--reactivity relationships and the use of molecular descriptors to investigate experimentally observed selectivity.
+
+\subsection{Decision-tree regression}
+
+A \keypoint{decision tree} approaches regression differently.
+Rather than fitting one continuous mathematical relationship across the complete dataset, the model repeatedly divides observations according to the values of their features.
+An individual observation follows a sequence of decisions through the resulting tree until it reaches a terminal region, or \emph{leaf}, from which a prediction is obtained.
+
+Decision trees can therefore represent non-linear relationships and interactions between features without requiring those relationships to be specified explicitly in advance.
+A single tree is also relatively straightforward to visualise, although increasingly deep trees rapidly become more complicated and can overfit their training data.
+
+\begin{figure}[htbp]
+    \centering
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[
+            transform shape,
+            decision/.style={draw=darkRed,fill=paleRed,line width=2pt,minimum width=3.8cm,minimum height=1.0cm,align=center,font=\sffamily},
+            leaf/.style={draw=darkGreen,fill=paleGreen,line width=2pt,minimum width=2.6cm,minimum height=0.9cm,align=center,font=\sffamily},
+            arrow/.style={->,>=Stealth,draw=darkGrey,line width=2.0pt},
+            branch/.style={font=\small\sffamily,text=darkGrey,fill=white,inner sep=1.5pt}
+        ]
+
+            \path[use as bounding box] (0,-0.4) rectangle (17.3,7.8);
+
+            \node[decision] (root) at (8.65,6.8) {\textbf{Feature $x_1 < a$?}};
+            \node[decision] (left) at (4.6,4.4) {\textbf{Feature $x_2 < b$?}};
+            \node[decision] (right) at (12.7,4.4) {\textbf{Feature $x_3 < c$?}};
+
+            \node[leaf] (l1) at (2.2,1.25) {$\hat{y}=32$};
+            \node[leaf] (l2) at (6.0,1.25) {$\hat{y}=57$};
+            \node[leaf] (l3) at (11.3,1.25) {$\hat{y}=71$};
+            \node[leaf] (l4) at (15.1,1.25) {$\hat{y}=84$};
+
+            \draw[arrow] (root.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {yes} (left.north);
+            \draw[arrow] (root.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {no} (right.north);
+
+            \draw[arrow] (left.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {yes} (l1.north);
+            \draw[arrow] (left.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {no} (l2.north);
+
+            \draw[arrow] (right.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {yes} (l3.north);
+            \draw[arrow] (right.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {no} (l4.north);
+
+        \end{tikzpicture}%
+    }
+
+    \caption{Schematic decision-tree regression model. Each decision is made from the centre of the lower edge of a node, with the \enquote{yes} branch drawn to the left and the \enquote{no} branch to the right. Every terminal leaf contains a numerical prediction.}
+    \label{fig2-7:regression-tree}
+\end{figure}
+
+
+\subsection{Random forests}
+
+A \keypoint{random forest} combines the predictions from many individual decision trees.
+Each tree is constructed using a different sample of the available training observations and features, so the trees do not all learn exactly the same relationship.
+For a regression problem, the individual tree predictions can then be combined to obtain an overall prediction.
+
+Schematically,
+
+\begin{equation}
+  \hat{y}_{\mathrm{forest}} = \frac{1}{N} \sum_{i=1}^{N} \hat{y}_i,
+\end{equation}
+
+where \(\hat{y}_i\) is the prediction from tree \(i\) and \(N\) is the number of trees in the ensemble.
+
+Combining many trees generally produces a more robust predictor than relying on one particular tree, although the resulting model is less immediately interpretable than a simple linear regression.
+
+\subsection{Gaussian-process regression}
+
+\keypoint{Gaussian-process regression} is a flexible approach to modelling non-linear relationships that is particularly useful when uncertainty in a prediction is important.
+Instead of returning only a predicted value, a Gaussian-process model can also describe uncertainty associated with that prediction.
+
+We can therefore think schematically of the model returning
+
+\begin{equation}
+  y(\mathbf{x}) \sim \mathcal{N} \left( \mu(\mathbf{x}), \sigma^2(\mathbf{x}) \right),
+\end{equation}
+
+where \(\mu(\mathbf{x})\) represents the predicted mean response for features \(\mathbf{x}\), and \(\sigma(\mathbf{x})\) describes uncertainty associated with that prediction.
+
+The mathematical details are not required here.
+The important idea is that a model can tell us both \enquote{what do I predict?}
+and \enquote{how uncertain is that prediction?}
+This distinction will become particularly useful when we encounter Bayesian optimisation later in the course.
+
+\begin{figure}[htbp]
+    \centering
+
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[
+            transform shape,
+            axis/.style={draw=darkGrey,line width=1.5pt,->,>=Stealth},
+            datum/.style={darkBlue,fill=darkBlue},
+            mean/.style={draw=darkRed,line width=2.5pt},
+            bound/.style={draw=darkGreen,dashed,line width=1.5pt},
+            label/.style={font=\small\sffamily,text=darkGrey}
+        ]
+
+            \path[use as bounding box] (0,-0.4) rectangle (17.3,6.0);
+
+            \draw[axis] (1.0,0.8) -- (16.4,0.8);
+            \draw[axis] (1.0,0.8) -- (1.0,5.2);
+            \node[label] at (15.3,0.35) {feature, $x$};
+            \node[label,rotate=90] at (0.55,4.2) {target, $y$};
+
+            % Approximate uncertainty band
+            \fill[paleGreen,opacity=0.60]
+                plot[smooth] coordinates {
+                    (1.4,3.1)
+                    (2.6,3.6)
+                    (3.8,4.0)
+                    (5.0,3.9)
+                    (6.2,3.4)
+                    (7.4,2.8)
+                    (8.6,2.5)
+                    (9.8,2.8)
+                    (11.0,3.5)
+                    (12.2,4.3)
+                    (13.4,4.8)
+                    (14.6,4.75)
+                    (15.8,4.4)
+                }
+                --
+                plot[smooth] coordinates {
+                    (15.8,1.9)
+                    (14.6,2.4)
+                    (13.4,2.7)
+                    (12.2,2.9)
+                    (11.0,2.7)
+                    (9.8,2.1)
+                    (8.6,1.7)
+                    (7.4,1.8)
+                    (6.2,2.2)
+                    (5.0,2.8)
+                    (3.8,3.0)
+                    (2.6,2.8)
+                    (1.4,2.2)
+                }
+                -- cycle;
+
+            % Predictive mean
+            \draw[mean]
+                plot[smooth] coordinates {
+                    (1.4,2.65)
+                    (2.6,3.20)
+                    (3.8,3.50)
+                    (5.0,3.40)
+                    (6.2,2.80)
+                    (7.4,2.30)
+                    (8.6,2.10)
+                    (9.8,2.45)
+                    (11.0,3.10)
+                    (12.2,3.60)
+                    (13.4,3.75)
+                    (14.6,3.60)
+                    (15.8,3.15)
+                };
+
+            % Observations concentrated in the middle
+            \foreach \x/\y in {
+                3.6/3.45,
+                4.5/3.55,
+                5.4/3.25,
+                6.4/2.75,
+                7.3/2.35,
+                8.3/2.05,
+                9.2/2.30,
+                10.1/2.60,
+                11.0/3.05,
+                11.8/3.45,
+                12.6/3.70
+            } {
+                \fill[datum] (\x,\y) circle (3pt);
+            }
+
+            \node[label,text=darkRed,anchor=west] at (12.8,3.55) {predicted mean};
+            \node[label,text=darkGreen,anchor=west] at (13.0,4.65) {predictive uncertainty};
+
+        \end{tikzpicture}%
+    }
+
+    \caption{
+        Conceptual Gaussian-process regression model.
+        The model provides a predicted mean response together with uncertainty
+        that can vary across feature space.
+        This combination of prediction and uncertainty is particularly useful
+        in Bayesian optimisation, discussed later in the course.
+    }
+    \label{fig2-9:gaussian-process}
+\end{figure}
+
+\subsection{Neural networks}
+
+\keypoint{Neural networks} provide another family of flexible models capable of representing complicated non-linear relationships.
+The inputs are transformed through interconnected layers containing fitted parameters before producing the final prediction.
+
+In highly simplified form,
+
+\begin{equation}
+  \mathbf{x} \longrightarrow \text{hidden representations}
+             \longrightarrow \hat{y}.
+\end{equation}
+
+Neural networks can be powerful when appropriate data are available, but their flexibility can make their internal reasoning considerably harder to interpret than a simple linear model.
+For this course, it is sufficient to recognise neural networks as one of several families of flexible machine-learning models rather than to understand their architecture or training algorithms.
+
+\begin{figure}[htbp]
+    \centering
+
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[
+            transform shape,
+            neuron/.style={
+                circle,
+                draw=darkBlue,
+                fill=paleBlue,
+                line width=2pt,
+                minimum size=8mm,
+                inner sep=0pt
+            },
+            hidden/.style={
+                circle,
+                draw=darkRed,
+                fill=paleRed,
+                line width=2pt,
+                minimum size=8mm,
+                inner sep=0pt
+            },
+            output/.style={
+                circle,
+                draw=darkGreen,
+                fill=paleGreen,
+                line width=2pt,
+                minimum size=9mm,
+                inner sep=0pt
+            },
+            connection/.style={draw=darkGrey,line width=0.9pt},
+            label/.style={font=\small\sffamily,text=darkGrey,align=center}
+        ]
+
+            \path[use as bounding box] (0,-0.5) rectangle (17.3,6.0);
+
+            % Input layer
+            \node[neuron] (x1) at (2.2,4.7) {$x_1$};
+            \node[neuron] (x2) at (2.2,3.5) {$x_2$};
+            \node[neuron] (x3) at (2.2,2.3) {$x_3$};
+            \node[label] at (2.2,1.1) {input features};
+
+            % Hidden layer 1
+            \node[hidden] (h11) at (6.3,5.1) {};
+            \node[hidden] (h12) at (6.3,3.9) {};
+            \node[hidden] (h13) at (6.3,2.7) {};
+            \node[hidden] (h14) at (6.3,1.5) {};
+            \node[label] at (6.3,0.65) {hidden layer};
+
+            % Hidden layer 2
+            \node[hidden] (h21) at (10.5,4.7) {};
+            \node[hidden] (h22) at (10.5,3.5) {};
+            \node[hidden] (h23) at (10.5,2.3) {};
+            \node[label] at (10.5,1.1) {hidden layer};
+
+            % Output
+            \node[output] (y) at (14.8,3.5) {$\hat{y}$};
+            \node[label] at (14.8,2.2) {prediction};
+
+            % Connections
+            \foreach \i in {1,2,3} {
+                \foreach \j in {1,2,3,4} {
+                    \draw[connection] (x\i) -- (h1\j);
+                }
+            }
+
+            \foreach \i in {1,2,3,4} {
+                \foreach \j in {1,2,3} {
+                    \draw[connection] (h1\i) -- (h2\j);
+                }
+            }
+
+            \foreach \i in {1,2,3} {
+                \draw[connection] (h2\i) -- (y);
+            }
+
+            \node[label] at (8.4,5.55) {fitted weighted connections};
+
+        \end{tikzpicture}%
+    }
+
+    \caption{
+        Highly simplified schematic of a feed-forward neural network.
+        Input features are transformed through interconnected hidden layers
+        containing fitted parameters before producing the final prediction.
+        The architecture shown is illustrative rather than prescriptive.
+    }
+    \label{fig2-8:neural-network}
+\end{figure}
+
+\subsection{Evaluating regression models}
+
+A regression model produces a numerical prediction, \(\hat{y}_i\), for each experimentally observed target, \(y_i\).
+The simplest way to describe the prediction error for an individual observation is therefore the \keypoint{residual},
+
+\begin{equation}
+  e_i = y_i - \hat{y}_i.
+\end{equation}
+
+A positive residual means that the model has underpredicted the observed value, whereas a negative residual means that the model has overpredicted it.
+Examining the distribution of residuals can be useful because systematic patterns may indicate that the model is failing to capture an important relationship in the data.
+
+To compare performance across many observations, the individual errors can be combined into summary statistics.
+One intuitive measure is the \keypoint{mean absolute error (MAE)},
+
+\begin{equation}
+  \mathrm{MAE} = \frac{1}{n} \sum_{i=1}^{n} \left| y_i - \hat{y}_i \right|.
+\end{equation}
+
+The MAE can be interpreted in the same units as the target.
+For example, an MAE of \(3\) percentage points for a model predicting reaction yield means that its predictions differ from the observed yields by \(3\) percentage points on average.
+
+Another commonly encountered measure is the \keypoint{root mean squared error (RMSE)},
+
+\begin{equation}
+  \mathrm{RMSE} = \sqrt{\frac{1}{n} \sum_{i=1}^{n} \left( y_i - \hat{y}_i \right)^2}.
+\end{equation}
+
+Because the errors are squared before averaging, large errors contribute more strongly to RMSE than to MAE.
+RMSE is therefore particularly sensitive to observations for which the model makes very poor predictions.
+
+The \keypoint{coefficient of determination}, \(R^2\), instead compares the prediction errors with the variation already present in the observed targets,
+
+\begin{equation}
+  R^2
+  = 1
+    - \frac{\displaystyle \sum_{i=1}^{n} \left( y_i - \hat{y}_i \right)^2}{\displaystyle \sum_{i=1}^{n} \left( y_i - \bar{y} \right)^2},
+\end{equation}
+
+where \(\bar{y}\) is the mean of the observed target values.
+
+An \(R^2\) value close to \(1\) indicates that the model accounts for a large fraction of the variation in the observed values.
+However, a high \(R^2\) does not by itself demonstrate that the model will make useful predictions for new chemistry.
+In particular, a model can fit its training data extremely well while performing poorly on independent test data.
+
+Model performance is often visualised using a \keypoint{parity plot}, in which predicted values are plotted against observed values.
+An ideal model would place every observation on the line
+
+\begin{equation}
+  \hat{y} = y.
+\end{equation}
+
+Deviations from this line show the magnitude and direction of the prediction errors and can reveal behaviour that is difficult to identify from a single summary statistic.
+
+\begin{figure}[htbp]
+    \centering
+
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[
+            transform shape,
+            axis/.style={draw=darkGrey,line width=1.5pt,->,>=Stealth},
+            datum/.style={darkBlue,fill=darkBlue},
+            guide/.style={draw=darkRed,dashed,line width=2pt},
+            residual/.style={draw=darkRed,line width=1.5pt},
+            title/.style={font=\sffamily\bfseries},
+            label/.style={font=\small\sffamily,text=darkGrey}
+        ]
+
+            \path[use as bounding box] (0,-0.5) rectangle (17.3,6.0);
+
+            % Parity plot
+            \node[title] at (4.25,5.55) {Parity plot};
+            \draw[axis] (1.0,0.9) -- (7.6,0.9);
+            \draw[axis] (1.0,0.9) -- (1.0,5.0);
+            \node[label] at (6.6,0.45) {observed, $y$};
+            \node[label,rotate=90] at (0.55,4.1) {predicted, $\hat{y}$};
+            \draw[guide] (1.25,1.15) -- (7.15,4.75);
+
+            \foreach \x/\y in {
+                1.6/1.45,
+                2.1/1.85,
+                2.7/2.15,
+                3.2/2.75,
+                3.8/2.90,
+                4.4/3.55,
+                5.0/3.65,
+                5.6/4.15,
+                6.2/4.05,
+                6.8/4.60
+            } {
+                \fill[datum] (\x,\y) circle (3pt);
+            }
+
+            % Highlight one prediction error
+            \fill[darkYellow] (5.0,3.65) circle (5pt);
+            \draw[residual] (5.0,3.34) -- (5.0,3.65);
+            \node[label,anchor=west] at (5.15,3.50) {residual};
+
+            % Residual plot
+            \node[title] at (13.05,5.55) {Residual plot};
+            \draw[axis] (9.8,2.95) -- (16.6,2.95);
+            \draw[axis] (9.8,0.9) -- (9.8,5.0);
+            \node[label] at (15.45,2.50) {predicted, $\hat{y}$};
+            \node[label,rotate=90] at (9.35,4.15) {residual, $e$};
+            \draw[guide] (10.0,2.95) -- (16.2,2.95);
+
+            \foreach \x/\y in {
+                10.4/3.15,
+                10.9/2.70,
+                11.5/3.30,
+                12.1/2.55,
+                12.7/3.05,
+                13.3/2.65,
+                13.9/3.35,
+                14.5/2.80,
+                15.1/3.10,
+                15.7/2.60
+            } {
+                \fill[datum] (\x,\y) circle (3pt);
+            }
+
+        \end{tikzpicture}%
+    }
+
+    \caption{
+        Schematic parity and residual plots for a regression model.
+        In a parity plot, ideal predictions lie on the line $\hat{y}=y$.
+        A residual plot displays the prediction errors directly and can reveal
+        systematic behaviour that is obscured by a single summary statistic.
+    }
+    \label{fig2-6:parity-residual}
+\end{figure}
+
+\begin{warningbox}
+  \keypoint{No single metric tells us whether a regression model is \enquote{good}.}
+
+  MAE describes the typical absolute error, RMSE gives greater weight to large errors, and \(R^2\) describes how much of the variation in the target is accounted for by the model.
+  These quantities should be considered alongside the distribution of the data, residuals, performance on unseen observations, and the chemical purpose of the model.
+\end{warningbox}
+
+\section{Classification models}
+
+A \keypoint{classification model} predicts which of a set of predefined classes should be assigned to an observation.
+A simple chemical classification problem might ask whether a reaction is \enquote{reactive} or \enquote{unreactive}, although classification can also involve more than two possible classes.
+
+\subsection{Decision trees}
+
+A simple decision tree provides an intuitive example of classification.
+The model selects a feature and a threshold that can be used to divide observations into different groups.
+For example,
+
+\begin{equation}
+  x < x_{\mathrm{split}} \quad \longrightarrow \quad \text{class A},
+\end{equation}
+
+while
+
+\begin{equation}
+  x \geq x_{\mathrm{split}} \quad \longrightarrow \quad \text{class B}.
+\end{equation}
+
+More complicated trees can make a sequence of such decisions using different features.
+The model therefore divides the feature space into regions associated with different predicted classes.
+
+The same general family of decision-tree algorithms can consequently be used for either regression or classification.
+The distinction between regression and classification describes the \emph{problem being solved}, rather than necessarily identifying a completely different family of algorithms.
+
+\begin{figure}[htbp]
+    \centering
+    \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[
+            transform shape,
+            decision/.style={draw=darkRed,fill=paleRed,line width=2pt,minimum width=3.8cm,minimum height=1.0cm,align=center,font=\sffamily},
+            leaf/.style={draw=darkYellow,fill=paleYellow,line width=2pt,minimum width=2.6cm,minimum height=0.9cm,align=center,font=\sffamily},
+            arrow/.style={->,>=Stealth,draw=darkGrey,line width=2.0pt},
+            branch/.style={font=\small\sffamily,text=darkGrey,fill=white,inner sep=1.5pt}
+        ]
+
+            \path[use as bounding box] (0,-0.4) rectangle (17.3,7.8);
+
+            \node[decision] (root) at (8.65,6.8) {\textbf{Feature $x_1 < a$?}};
+            \node[decision] (left) at (4.6,4.4) {\textbf{Feature $x_2 < b$?}};
+            \node[decision] (right) at (12.7,4.4) {\textbf{Feature $x_3 < c$?}};
+
+            \node[leaf] (l1) at (2.2,1.25) {\textbf{Class A}};
+            \node[leaf] (l2) at (6.0,1.25) {\textbf{Class B}};
+            \node[leaf] (l3) at (11.3,1.25) {\textbf{Class A}};
+            \node[leaf] (l4) at (15.1,1.25) {\textbf{Class C}};
+
+            \draw[arrow] (root.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {yes} (left.north);
+            \draw[arrow] (root.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {no} (right.north);
+
+            \draw[arrow] (left.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {yes} (l1.north);
+            \draw[arrow] (left.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {no} (l2.north);
+
+            \draw[arrow] (right.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {yes} (l3.north);
+            \draw[arrow] (right.south) -- ++(0,-0.55) -| node[branch,pos=0.72,above] {no} (l4.north);
+
+        \end{tikzpicture}%
+    }
+
+    \caption{Schematic decision-tree classification model. Each decision is made from the centre of the lower edge of a node, with the \enquote{yes} branch drawn to the left and the \enquote{no} branch to the right. Every terminal leaf contains a class label.}
+    \label{fig2-8:classification-tree}
+\end{figure}
+
+
+\subsection{Random forests}
+
+Random forests can similarly be used for classification.
+Each tree makes a prediction for the class of an observation, and the predictions from the collection of trees are combined to obtain the final classification.
+
+For a binary problem, we might express the predicted class schematically as
+
+\begin{equation}
+  \hat{c} = \operatorname{mode} \left( c_1,c_2,\ldots,c_N \right),
+\end{equation}
+
+where \(c_i\) is the class predicted by tree \(i\).
+The precise procedure depends on the implementation, but the important concept is that the final decision combines information from an \keypoint{ensemble} of models rather than relying on one tree.
+
+\subsection{Logistic regression}
+
+Despite its name, \keypoint{logistic regression} is commonly used for classification.
+Instead of predicting an unrestricted continuous quantity, the model predicts a value between zero and one that can be interpreted as the probability of belonging to a particular class.
+
+The logistic function has the form
+
+\begin{equation}
+  p = \frac{1}
+    {1 + \exp(-z)},
+\end{equation}
+
+where \(z\) can depend on one or more input features,
+
+\begin{equation}
+  z = β_0 + β_1x_1 + \cdots + β_px_p.
+\end{equation}
+
+A threshold can then be used to convert the probability into a class prediction.
+You are not expected to reproduce this model mathematically; the equation is shown to illustrate why logistic regression produces a bounded probability rather than an unrestricted numerical prediction.
+
+\subsection{Evaluating classification}
+
+Because a classification model predicts categories rather than continuous values, its predictions cannot be evaluated using the same errors used for regression.
+
+For a binary classifier, each prediction falls into one of four possibilities:
+
+\begin{itemize}
+  \item \textbf{true positive}: a positive observation is predicted as positive;
+  \item \textbf{true negative}: a negative observation is predicted as negative;
+  \item \textbf{false positive}: a negative observation is incorrectly predicted as positive;
+  \item \textbf{false negative}: a positive observation is incorrectly predicted as negative.
+\end{itemize}
+
+These outcomes can be displayed using a \keypoint{confusion matrix}.
+One simple performance measure is the accuracy,
+
+\begin{equation}
+  \mathrm{accuracy} = \frac{TP + TN}{TP + TN + FP + FN}.
+\end{equation}
+
+Accuracy alone does not always describe whether a classifier is useful, particularly when one class greatly outnumbers another or when false positives and false negatives have very different practical consequences.
+Other quantities such as precision and recall therefore emphasise different aspects of classification performance.
+
+\begin{figure}[htbp]
+    \centering
+
+    \resizebox{0.72\linewidth}{!}{%
+        \begin{tikzpicture}[
+            transform shape,
+            cellgood/.style={
+                draw=darkGreen,
+                fill=paleGreen,
+                line width=2pt,
+                minimum width=4.0cm,
+                minimum height=1.8cm,
+                align=center,
+                font=\sffamily
+            },
+            cellbad/.style={
+                draw=darkRed,
+                fill=paleRed,
+                line width=2pt,
+                minimum width=4.0cm,
+                minimum height=1.8cm,
+                align=center,
+                font=\sffamily
+            },
+            label/.style={font=\sffamily\bfseries,align=center},
+            smalllabel/.style={font=\small\sffamily,text=darkGrey,align=center}
+        ]
+
+            \path[use as bounding box] (-1.2,-0.5) rectangle (10.8,7.0);
+
+            \node[cellgood] (tp) at (4.0,4.9) {\textbf{True positive}\\TP};
+            \node[cellbad]  (fn) at (8.0,4.9) {\textbf{False negative}\\FN};
+            \node[cellbad]  (fp) at (4.0,2.8) {\textbf{False positive}\\FP};
+            \node[cellgood] (tn) at (8.0,2.8) {\textbf{True negative}\\TN};
+
+            \node[label] at (6.0,6.45) {Predicted class};
+            \node[smalllabel] at (4.0,5.95) {positive};
+            \node[smalllabel] at (8.0,5.95) {negative};
+
+            \node[label,rotate=90] at (0.55,3.85) {Actual class};
+            \node[smalllabel] at (1.85,4.9) {positive};
+            \node[smalllabel] at (1.85,2.8) {negative};
+
+        \end{tikzpicture}%
+    }
+
+    \caption{
+        Binary confusion matrix showing the four possible combinations of
+        actual and predicted classes.
+        Different classification metrics weight these outcomes in different ways.
+    }
+    \label{fig2-10:confusion-matrix}
+\end{figure}
+
+\begin{notebox}
+  \keypoint{Further terminology: precision and recall}
+
+  \textbf{Precision} asks what fraction of observations predicted to be positive really are positive,
+
+  \begin{equation}
+    \mathrm{precision} = \frac{TP}{TP + FP}.
+  \end{equation}
+
+  \textbf{Recall} asks what fraction of the genuinely positive observations were successfully identified,
+
+  \begin{equation}
+    \mathrm{recall} = \frac{TP}{TP + FN}.
+  \end{equation}
+
+  \textbf{ROC curves and AUC} Many classifiers produce a probability or score rather than directly assigning an observation to a class.
+  Changing the threshold used to convert this score into a class changes the balance between correctly identifying positive observations and incorrectly classifying negative observations as positive.
+  A \keypoint{receiver operating characteristic (ROC) curve} shows how classifier performance changes as this decision threshold is varied.
+  The \keypoint{area under the ROC curve (AUC)} provides a single measure of how effectively the model separates the two classes across all thresholds.
+  An AUC of \(0.5\) corresponds to random discrimination, whereas an AUC of \(1\) corresponds to perfect separation of the two classes.
+  ROC--AUC is useful when comparing classifiers independently of one particular classification threshold, but it does not by itself tell us whether the model is useful for the chemical problem being considered.
+
+  You should understand conceptually why different measures can give different impressions of classifier performance, but memorising these equations is not a learning objective for this course.
+\end{notebox}
+
+\begin{figure}[htbp]
+    \centering
+
+    \resizebox{0.72\linewidth}{!}{%
+        \begin{tikzpicture}[
+            transform shape,
+            axis/.style={draw=darkGrey,line width=1.5pt,->,>=Stealth},
+            roc/.style={draw=darkBlue,line width=3pt},
+            chance/.style={draw=darkGrey,dashed,line width=1.5pt},
+            label/.style={font=\small\sffamily,text=darkGrey}
+        ]
+
+            \path[use as bounding box] (0,-0.6) rectangle (10.5,9.5);
+
+            \draw[axis] (1.2,1.0) -- (9.5,1.0);
+            \draw[axis] (1.2,1.0) -- (1.2,8.8);
+
+            \node[label] at (7.2,0.35) {false-positive rate};
+            \node[label,rotate=90] at (0.45,6.15) {true-positive rate};
+
+            % Chance line
+            \draw[chance] (1.2,1.0) -- (8.9,8.4);
+            \node[label,rotate=43] at (6.85,6.15) {random discrimination};
+
+            % Example ROC curve
+            \draw[roc]
+                plot[smooth] coordinates {
+                    (1.2,1.0)
+                    (1.45,3.1)
+                    (1.85,4.8)
+                    (2.5,6.1)
+                    (3.4,7.0)
+                    (4.7,7.65)
+                    (6.2,8.05)
+                    (7.7,8.3)
+                    (8.9,8.4)
+                };
+
+            \node[
+                draw=darkBlue,
+                fill=paleBlue,
+                line width=1.5pt,
+                font=\sffamily,
+                align=center,
+                minimum width=3.5cm,
+                minimum height=1.0cm
+            ] at (6.8,3.0) {
+                Larger AUC\\
+                better separation
+            };
+
+            \node[label] at (5.2,9.0) {ROC curve};
+
+        \end{tikzpicture}%
+    }
+
+    \caption{
+        Schematic receiver operating characteristic (ROC) curve.
+        Varying the decision threshold changes the true-positive and false-positive
+        rates, and the area under the ROC curve (AUC) summarises class separation
+        across thresholds.
+    }
+    \label{fig2-11:roc-curve}
+\end{figure}
+
+\section{Additional ML paradigms}
+
+
+\subsection{Transfer learning}
+
+Transfer learning uses knowledge acquired while learning one problem to improve learning on a related problem.
+A model can first be trained using a large dataset for a \textit{source task}, before being adapted using the typically smaller amount of data available for a \textit{target task}.
+This can be particularly valuable in chemistry, where generating high-quality experimental data is often expensive and time-consuming.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        data/.style={
+          draw=darkBlue,
+          fill=paleBlue,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        process/.style={
+          draw=darkRed,
+          fill=paleRed,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        model/.style={
+          draw=darkGreen,
+          fill=paleGreen,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        arrow/.style={
+          ->,
+          >=Stealth,
+          draw=darkGrey,
+          line width=2.5pt
+        },
+        label/.style={
+          font=\small\sffamily,
+          text=darkGrey,
+          align=center
+        }
+      ]
+
+      \path[use as bounding box] (0,-1.1) rectangle (17.3,7.8);
+
+      % Source task
+      \node[data] (source) at (2.5,6.8)
+      {
+        \textbf{Source dataset}\\
+        many observations
+      };
+
+      \node[process] (pretrain) at (8.65,6.8)
+      {
+        \textbf{Train model}\\
+        source task
+      };
+
+      \node[model] (source-model) at (14.8,6.8)
+      {
+        \textbf{Pretrained model}\\
+        learned information
+      };
+
+      \draw[arrow] (source) -- (pretrain);
+      \draw[arrow] (pretrain) -- (source-model);
+
+      % Target task
+      \node[data] (target) at (2.5,1.5)
+      {
+        \textbf{Target dataset}\\
+        fewer observations
+      };
+
+      \node[process] (adapt) at (8.65,1.5)
+      {
+        \textbf{Adapt model}\\
+        target task
+      };
+
+      \node[model] (target-model) at (14.8,1.5)
+      {
+        \textbf{Adapted model}\\
+        target task
+      };
+
+      \draw[arrow] (target) -- (adapt);
+      \draw[arrow] (adapt) -- (target-model);
+
+      % Transfer between tasks
+      \draw[arrow]
+        (source-model.south)
+        -- ++(0,-2.0)
+        -| (adapt.north);
+
+      \node[label] at (12.6,4.15)
+      {
+        transfer learned\\
+        information
+      };
+
+      \node[label] at (2.5,5.35)
+      {
+        data-rich problem
+      };
+
+      \node[label] at (2.5,0.05)
+      {
+        related data-limited problem
+      };
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    Schematic representation of transfer learning.
+    A model is first trained using a relatively data-rich source task.
+    Information learned during this training is subsequently transferred to a related target task, where fewer observations may be available.
+  }
+  \label{fig2-12:transfer-learning}
+\end{figure}
+
+Transfer learning relies on the source and target problems sharing useful information.
+If the underlying chemistry is substantially different, knowledge transferred from one domain may provide little benefit or can even be misleading.
+We will return to this limitation later when considering the transferability of chemical models across different regions of chemical space and different mechanistic regimes.
+
+\subsection{Reinforcement learning}
+
+Reinforcement learning considers problems in which an \textit{agent} interacts with an \textit{environment}.
+The agent selects an action, observes the resulting state of the environment and receives a reward indicating how desirable the outcome was.
+Through repeated interactions, it learns a \textit{policy} for selecting actions that aims to maximise the cumulative reward.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        state/.style={
+          draw=darkBlue,
+          fill=paleBlue,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        agent/.style={
+          draw=darkRed,
+          fill=paleRed,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        environment/.style={
+          draw=darkGreen,
+          fill=paleGreen,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        arrow/.style={
+          ->,
+          >=Stealth,
+          draw=darkGrey,
+          line width=2.5pt
+        },
+        label/.style={
+          font=\small\sffamily,
+          text=darkGrey,
+          align=center,
+          fill=white,
+          inner sep=2pt
+        }
+      ]
+
+      \path[use as bounding box] (0,-0.5) rectangle (17.3,6.4);
+
+      \node[state] (state) at (2.5,3.8)
+      {
+        \textbf{State}\\
+        current information
+      };
+
+      \node[agent] (agent) at (8.65,3.8)
+      {
+        \textbf{Agent}\\
+        selects an action
+      };
+
+      \node[environment] (environment) at (14.8,3.8)
+      {
+        \textbf{Environment}\\
+        action produces outcome
+      };
+
+      \draw[arrow] (state) -- (agent);
+
+      \draw[arrow] (agent) -- node[label,above] {action} (environment);
+
+      % Feedback loop
+      \draw[arrow]
+        (environment.south)
+        -- ++(0,-2.3)
+        -| (2.5,2.1)
+        -- (state.south);
+
+      \node[label] at (8.65,1.25)
+      {
+        new state + reward
+      };
+
+      \node[
+        font=\small\sffamily,
+        text=darkGrey,
+        align=center
+      ] at (8.65,5.45)
+      {
+        repeated interaction changes the policy\\
+        used to select subsequent actions
+      };
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    Schematic representation of reinforcement learning.
+    An agent selects an action from the current state of an environment.
+    The resulting state and reward provide feedback that can be used to improve the policy used to select subsequent actions.
+  }
+  \label{fig2-13:reinforcement-learning}
+\end{figure}
+
+This differs from supervised learning because the desired action is not supplied directly as a labelled answer.
+Instead, the agent must learn which actions are useful from their consequences.
+Although reinforcement-learning algorithms will not be considered in detail here, the concept of learning through sequential interaction provides useful context for later discussions of automated experimentation and autonomous chemical laboratories.
+
+\subsection{Generative models} 
+
+Generative models learn patterns within a dataset with the aim of generating new examples that resemble the data on which they were trained. 
+In molecular science, a generative model can therefore be used to propose new molecular structures from a learned representation of known chemical space. 
+The generation process can also be conditioned or guided towards particular properties, allowing candidate molecules to be proposed that satisfy a desired set of objectives. 
+This introduces the concept of \textit{inverse molecular design} (Fig.~\ref{fig2-14:generative-inverse-design}).
+In conventional predictive modelling, a molecular structure is provided as the input and its properties are predicted.
+Inverse design reverses this question: given a desired set of properties, what molecular structures might possess them? 
+Generative models provide one computational approach to exploring this problem, but generating a molecular structure does not establish that it can be synthesised, is chemically stable, or will exhibit the desired behaviour experimentally. 
+Several architectures can be used to construct generative models.
+In an \keypoint{encoder--decoder} architecture, an encoder converts an input such as a molecular representation into a learned numerical representation, while a decoder converts this representation back into an output.
+Generative approaches can exploit this learned representation to generate new molecular structures.
+\keypoint{Transformer} models instead learn relationships between elements of sequential representations and have become important for molecular representations such as SMILES.
+The details of these architectures are not required here; the important point is that different model architectures can be used to learn chemical representations from which new molecular structures can be generated.
+These considerations become particularly important when generative models are combined with molecular property prediction, optimisation and automated experimentation, topics to which we will return later.
+
+\begin{figure}[htbp]
+  \centering
+
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        transform shape,
+        input/.style={
+          draw=darkBlue,
+          fill=paleBlue,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        process/.style={
+          draw=darkRed,
+          fill=paleRed,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        result/.style={
+          draw=darkGreen,
+          fill=paleGreen,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        candidate/.style={
+          draw=darkYellow,
+          fill=paleYellow,
+          line width=2.0pt,
+          minimum width=4.6cm,
+          minimum height=1.2cm,
+          align=center,
+          font=\sffamily
+        },
+        arrow/.style={
+          ->,
+          >=Stealth,
+          draw=darkGrey,
+          line width=2.5pt
+        },
+        label/.style={
+          font=\small\sffamily,
+          text=darkGrey,
+          align=center
+        }
+      ]
+
+      \path[use as bounding box] (0,-1.0) rectangle (17.3,8.0);
+
+      % Conventional predictive modelling
+      \node[input] (known-molecule) at (2.5,6.8)
+      {
+        \textbf{Known molecule}\\
+        molecular representation
+      };
+
+      \node[process] (predictive-model) at (8.65,6.8)
+      {
+        \textbf{Predictive model}
+      };
+
+      \node[result] (predicted-property) at (14.8,6.8)
+      {
+        \textbf{Predicted property}\\
+        or behaviour
+      };
+
+      \draw[arrow] (known-molecule) -- (predictive-model);
+      \draw[arrow] (predictive-model) -- (predicted-property);
+
+      \node[label] at (8.65,5.5)
+      {
+        forward prediction:\\
+        structure $\rightarrow$ property
+      };
+
+      % Inverse molecular design
+      \node[input] (desired-property) at (2.5,1.5)
+      {
+        \textbf{Desired properties}\\
+        design objectives
+      };
+
+      \node[process] (generative-model) at (8.65,1.5)
+      {
+        \textbf{Generative model}\\
+        explores learned chemical space
+      };
+
+      \node[candidate] (candidate-molecules) at (14.8,1.5)
+      {
+        \textbf{Candidate molecules}\\
+        proposed structures
+      };
+
+      \draw[arrow] (desired-property) -- (generative-model);
+      \draw[arrow] (generative-model) -- (candidate-molecules);
+
+      \node[label] at (8.65,0.1)
+      {
+        inverse design:\\
+        desired property $\rightarrow$ candidate structures
+      };
+
+      % Candidates still require assessment.
+      \draw[arrow]
+        (candidate-molecules.north)
+        -- ++(0,1.6)
+        -| (predicted-property.south);
+
+      \node[label] at (15.2,4.15)
+      {
+        assess predicted\\
+        properties
+      };
+
+    \end{tikzpicture}%
+  }
+
+  \caption{
+    Schematic comparison of conventional property prediction and inverse molecular design.
+    Predictive modelling starts with a known molecular structure and estimates its properties or behaviour.
+    In inverse design, desired properties are specified first and a generative model proposes candidate molecular structures.
+    The generated candidates must still be assessed computationally and ultimately validated experimentally.
+  }
+  \label{fig2-14:generative-inverse-design}
+\end{figure}
+
+
+\section{Choosing and interpreting models}
+
+The examples above represent only a small selection of available machine-learning algorithms.
+In practice, the choice of model depends on the nature and amount of available data, whether the relationship is expected to be linear or strongly non-linear, the importance of predictive uncertainty, and whether chemical interpretation is an important objective.
+
+\begin{equation}
+  \text{chemical question} + \text{data} + \text{representation} + \text{model} \longrightarrow \text{prediction}.
+\end{equation}
+
+A more flexible algorithm is not automatically a better choice.
+Simple models can be extremely useful when they describe the relevant relationship adequately and their fitted parameters can be interpreted chemically.
+More flexible models may capture relationships that simpler approaches cannot, but they can also be harder to interpret and more susceptible to learning features of a limited training dataset that do not generalise.
+
+This distinction between \keypoint{prediction} and \keypoint{interpretation} will become particularly important later in the course.
+We will encounter chemically interpretable multivariate models when considering quantitative structure--reactivity relationships, while Gaussian-process models will return when we discuss Bayesian reaction optimisation.
+
+The model itself is also only one component of the workflow.
+A sophisticated algorithm cannot recover chemical information that was never included in the features, correct automatically for an unrepresentative dataset, or guarantee that predictions made far outside the training domain are reliable.
+
+For this reason, we next return to chemistry and consider how experimental data can be transformed and visualised to provide mechanistic information directly.
+
+\section{Summary}
+
+The key distinctions introduced in this chapter are between \keypoint{features and targets}, \keypoint{regression and classification}, \keypoint{supervised and unsupervised learning}, and \keypoint{training and testing}.
+When evaluating models, we must also consider whether they \keypoint{generalise} to unseen data, whether they are \keypoint{overfit}, and whether a prediction represents \keypoint{interpolation or extrapolation}.
+The mathematical details of the models introduced in this chapter are provided for reference rather than as examinable derivations.
+Transfer learning, reinforcement learning and generative modelling provide additional approaches that will reappear later when considering chemical prediction, optimisation, inverse design and automated experimentation.
+In subsequent chapters, this vocabulary will allow us to concentrate on the chemical information contained in models rather than on their implementation.

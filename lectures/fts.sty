@@ -1,0 +1,250 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{fts}[2026/04/10 Personal style choices of FTS]
+
+\RequirePackage[british]{babel}
+
+% -----------------------
+% FONTS (XeLaTeX)
+% -----------------------
+
+\RequirePackage{microtype}
+\RequirePackage{fontspec}
+\RequirePackage{unicode-math}
+\setmainfont[
+    Path = fonts/, 
+    Extension = .ttf, 
+    UprightFont = *-Regular, 
+    BoldFont = *-Bold, 
+    ItalicFont = *-Italic, 
+    BoldItalicFont = *-BoldItalic, 
+]{STIXTwoText} 
+\setmathfont[ Path = fonts/, ]{STIXTwoMath-Regular.ttf}
+\setsansfont{Lato}
+\setmonofont[
+    Path = fonts/,
+    Extension = .ttf,
+    UprightFont = *-Regular,
+    BoldFont = *-Bold,
+    Scale = MatchLowercase,
+    Contextuals = Alternate,
+    Renderer = Basic,
+]{FiraCodeNerdFont}
+
+% -----------------------
+% CHEMICAL EQUATIONS
+% -----------------------
+
+\RequirePackage[version=4]{mhchem}
+
+% -----------------------
+% GRAPHICS + FLOATS
+% -----------------------
+
+\RequirePackage{graphicx}
+\RequirePackage{wrapfig}
+\RequirePackage{newfloat}
+
+% -----------------------
+% CAPTIONS
+% -----------------------
+
+\RequirePackage{caption}
+
+\captionsetup{
+    labelsep=period,
+    font=footnotesize,
+    labelfont=bf,
+    justification=justified,
+}
+
+% -----------------------
+% COLORS
+% -----------------------
+
+\RequirePackage{tolpalette}
+\definecolor{durhampurple}{RGB}{104,36,109}
+
+
+%
+% % -----------------------
+% % MINTED
+% % -----------------------
+%
+% \RequirePackage[newfloat=true]{minted}
+%
+% \usemintedstyle{friendly}
+%
+% \setminted{
+%     fontsize=\small,
+%     linenos=true,
+%     %    numbersep=2em,
+%     framesep=6pt,
+%     xleftmargin=2em,
+%     breaklines=true,
+%     frame=lines
+% }
+
+% -----------------------
+% BIBLIOGRAPHY
+% -----------------------
+
+\RequirePackage[
+    style=chem-acs,
+    backend=biber,
+    hyperref=true,
+    doi=true,
+    backref=true
+]{biblatex}
+
+\RequirePackage{csquotes}
+
+% -----------------------
+% SEMANTIC HIGHLIGHT BOX
+% -----------------------
+
+\RequirePackage{xparse}
+\RequirePackage[most]{tcolorbox}
+
+\tcbset{common/.style={
+            enhanced,
+            frame hidden,
+            boxrule=0pt,
+            enhanced jigsaw,
+            arc=0mm,
+            sharp corners,
+            valign=center,
+            left=2mm,
+            right=2mm,
+            top=1.5mm,
+            bottom=1mm,
+        },
+}
+
+\newtcolorbox{warningbox}{
+    common,
+    colback=paleRed,
+    borderline west={3.5pt}{0pt}{darkRed}
+}
+
+\newtcolorbox{conceptbox}{
+    common,
+    colback=paleBlue,
+    borderline west={3.5pt}{0pt}{darkBlue}
+}
+
+\newtcolorbox{methodbox}{
+    common,
+    colback=paleCyan,
+    borderline west={3.5pt}{0pt}{darkCyan}
+}
+
+\newtcolorbox{resultbox}{
+    common,
+    colback=paleGreen,
+    borderline west={3.5pt}{0pt}{darkGreen}
+}
+
+\newtcolorbox{insightbox}{
+    common,
+    colback=paleYellow,
+    borderline west={3.5pt}{0pt}{darkYellow}
+}
+
+\newtcolorbox{notebox}{
+    common,
+    colback=paleGrey,
+    borderline west={3.5pt}{0pt}{darkGrey}
+}
+
+% -----------------------
+% SEMANTIC EMPHASIS (MEDIUM CONTRAST)
+% -----------------------
+
+\newcommand{\keypoint}[1]{%
+    \textbf{\textcolor{darkBlue}{#1}}%
+}
+
+\newcommand{\result}[1]{%
+    \textbf{\textcolor{darkGreen}{#1}}%
+}
+
+\newcommand{\warning}[1]{%
+    \textbf{\textcolor{darkRed}{#1}}%
+}
+
+\newcommand{\method}[1]{%
+    \textbf{\textcolor{darkCyan}{#1}}%
+}
+
+\newcommand{\insight}[1]{%
+    \textbf{\textcolor{darkYellow}{#1}}%
+}
+
+% % -----------------------
+% % PALE HIGHLIGHT SYSTEM
+% % -----------------------
+%
+\RequirePackage{soul}
+
+\let\oldhl\hl
+
+% General highlight (default emphasis)
+\newcommand{\hlc}[2][paleYellow]{{%
+            \sethlcolor{#1}\oldhl{#2}}%
+}
+\renewcommand{\hl}[1]{{%
+            \sethlcolor{paleYellow}\oldhl{#1}}%
+}
+% -----------------------
+% LISTINGS
+% -----------------------
+
+\RequirePackage{listings}
+
+\DeclareFloatingEnvironment[
+    fileext=lol,
+    listname={List of Listings},
+    name=Listing,
+    placement=htbp,
+]{listing}
+
+\lstdefinestyle{modern}{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue!70!black}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{orange!80!black},
+    showstringspaces=false,
+    % --- NUMBERS SETUP ---
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=12pt,          % Distance between numbers and the code
+    % ---------------------
+    columns=flexible,
+    keepspaces=true,
+    breaklines=true,
+    extendedchars=true,
+    aboveskip=0pt,
+    belowskip=0pt,
+}
+
+
+\newtcblisting{codebox}[2][]{
+    listing engine=listings,
+    listing options={style=modern, language=#2},
+    listing only,
+    sharp corners,
+    boxrule=0pt,
+    leftrule=2.5pt,
+    colframe=durhampurple,
+    colback=durhampurple!5,
+    enhanced,               % Required for advanced geometry
+    clip upper=false,       % Allows numbers to be drawn outside the box area
+    enlarge left by=25pt,   % Shift box right to create white space for numbers
+    width=\linewidth-25pt,  % Shrink width
+    % --- PADDING ---
+    top=1mm,                % 2mm top padding
+    bottom=1mm,             % 2mm bottom padding
+    left=2pt,               % Space between the purple bar and the code
+    % -------------------------
+    #1                      % Pass [float] or [title=...] here
+}

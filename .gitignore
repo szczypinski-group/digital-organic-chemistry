@@ -218,3 +218,51 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# LaTeX build files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+
+# Additional LaTeX intermediates
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.glsdefs
+*.ist
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+
+# minted
+_minted-*
+*.pyg
+
+# latexmk
+*.xdv
+
+# Temporary files
+*.bak
+*.tmp
+*~
+*.swp
+
+# OS/editor cruft
+.DS_Store
+
+# Build directory, if used
+build/

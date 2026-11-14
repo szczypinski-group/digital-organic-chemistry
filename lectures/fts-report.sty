@@ -1,0 +1,173 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{fts-report}[2026/04/11 Lecture notes style (FTS)]
+
+\RequirePackage{fts}
+
+% -----------------------
+% GEOMETRY (TWO-SIDED + WIDE OUTER MARGIN)
+% -----------------------
+
+\RequirePackage[
+    a4paper,
+    twoside,
+    inner=2.5cm,
+    outer=5.5cm,
+    top=2.5cm,
+    bottom=2.5cm,
+    headsep=0.8cm,
+    footskip=1cm,
+    marginparwidth=4.5cm,
+    marginparsep=0.5cm
+]{geometry}
+
+\RequirePackage{setspace} 
+\setstretch{1.15}
+
+% -----------------------
+% BIBLIOGRAPHY
+% -----------------------
+
+\RequirePackage[hidelinks]{hyperref}
+
+% -----------------------
+% HEADER / FOOTER
+% -----------------------
+
+\RequirePackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+\makeatletter
+\AtBeginDocument{%
+  \newcommand{\DocumentTitle}{\@title}
+}
+\makeatother
+
+\AtBeginDocument{%
+    \fancyhead[LE]{\sffamily\small\thepage}
+    \fancyhead[RO]{\sffamily\small\thepage}
+    \fancyhead[LO]{\sffamily\small\textbf{\MakeUppercase{\DocumentTitle}}}
+    \fancyhead[RE]{\sffamily\small\textbf{\leftmark}}
+    \fancyfoot[C]{}
+}
+
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyhead[LE]{\sffamily\small\thepage}
+  \fancyhead[RO]{\sffamily\small\thepage}
+  \fancyhead[LO]{\sffamily\small\textbf{\MakeUppercase{\DocumentTitle}}}
+  \fancyhead[RE]{\sffamily\small\textbf{\leftmark}}
+}
+
+
+% -----------------------
+% SECTION FORMATTING
+% -----------------------
+
+\RequirePackage{titlesec}
+
+\titleformat{\chapter}
+{\bfseries\sffamily\Large}
+{\thechapter.}{1em}{}
+
+\titleformat{\section}
+{\bfseries\sffamily\large}
+{\thesection.}{1em}{}
+
+\titleformat{\subsection}
+{\bfseries\sffamily}
+{\thesubsection.}{1em}{}
+
+\titleformat{\subsubsection} 
+{\bfseries\sffamily\small} 
+{\thesubsubsection.}{1em}{}
+%
+% \titlespacing*{\chapter}{0pt}{-2em}{1em}
+% \titlespacing*{\section}{0pt}{1.2em}{0.6em}
+% \titlespacing*{\subsection}{0pt}{0.8em}{0.4em}
+
+% -----------------------
+% FLOAT SPACING
+% -----------------------
+%
+% \setlength{\textfloatsep}{12pt}
+% \setlength{\floatsep}{10pt}
+% \setlength{\intextsep}{10pt}
+
+% -----------------------
+% LISTS
+% -----------------------
+
+\RequirePackage{enumitem}
+
+\setlist{
+  itemsep=0.15em,
+  topsep=0em,
+  parsep=0pt,
+  partopsep=0pt
+}
+
+% -----------------------
+% MARGIN SYSTEM
+% -----------------------
+
+\RequirePackage{marginnote}
+
+\newcommand{\mnote}[1]{\marginnote{\footnotesize\raggedright #1}}
+
+
+\newcommand{\mcite}[1]{%
+    \marginnote{\footnotesize\raggedright\fullcite{#1}}%
+}
+
+% -----------------------
+% PARAGRAPH STYLE
+% -----------------------
+
+\RequirePackage{microtype}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+\setlength{\emergencystretch}{2em}
+
+% -----------------------
+% WRITE-IN / GAP SYSTEM
+% -----------------------
+
+% Inline gap
+
+\newif\ifsolutions
+\solutionsfalse
+
+\newtcolorbox{gapbox}[1][]{
+  common,
+  colback=paleYellow,
+  borderline west={3.5pt}{0pt}{darkYellow},
+  breakable,
+  height fixed for=all,
+  #1
+}
+
+\newcommand{\solution}[2]{%
+  \begin{gapbox}[height=#1]
+    \ifsolutions
+      #2
+    \else
+      \vfill
+    \fi
+  \end{gapbox}
+}
+
+% -----------------------
+% CAPTIONS
+% -----------------------
+
+\captionsetup{
+    skip=0.8em
+}
+
+\captionsetup[listing]{
+    position=bottom,
+    skip=-0.2em
+}
