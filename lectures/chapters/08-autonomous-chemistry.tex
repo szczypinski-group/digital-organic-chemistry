@@ -1,0 +1,232 @@
+% !TeX root = ../notes.tex
+% Planning version: section skeleton, content bullets, live TikZ, figure list, and reading list.
+
+\chapter{From automated synthesis to self-driving chemistry}
+
+\begin{notebox}
+  \keypoint{Intellectual question:} How is the loop closed between experiment selection, execution, measurement, and learning?
+\end{notebox}
+
+\section{Automation, programmability, and autonomy}
+
+\begin{itemize}
+  \item Define automation as execution of known instructions.
+  \item Define programmability as a digital representation that can be transferred, generalised, and executed on compatible hardware.
+  \item Define autonomy as measurement changing the decision about what happens next.
+  \item Keep these categories separate when evaluating published platforms.
+\end{itemize}
+
+\solution{5.8cm}{%
+  \centering
+  \resizebox{0.94\linewidth}{!}{%
+    \begin{tikzpicture}[
+      stage/.style={draw=darkBlue,fill=paleBlue,line width=1.6pt,minimum width=4.0cm,minimum height=1.2cm,align=center,font=\sffamily},
+      final/.style={draw=darkGreen,fill=paleGreen,line width=1.8pt,minimum width=4.0cm,minimum height=1.2cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2.2pt}
+    ]
+      \node[stage] (automation) at (0,0) {automation\\executes instructions};
+      \node[stage] (program) at (5.5,0) {programmability\\encodes procedures};
+      \node[final] (autonomy) at (11,0) {autonomy\\uses results to decide};
+      \draw[arrow] (automation) -- (program);
+      \draw[arrow] (program) -- (autonomy);
+    \end{tikzpicture}%
+  }
+}
+
+\section{Automated peptide synthesis}
+
+\begin{itemize}
+  \item Use Merrifield and Stewart as the historical example of mechanising a repetitive synthetic cycle.\mcite{Merrifield1965}
+  \item Identify the predefined sequence of deprotection, washing, coupling, and washing.
+  \item Credit the scientific importance of reliable execution without calling it autonomous.
+  \item Ask what is represented digitally and which choices remain fixed before the run begins.
+\end{itemize}
+
+\section{Chemputer and programmable synthesis}
+
+\begin{itemize}
+  \item Introduce transferable digital procedures and a hardware graph.\mcite{Steiner2019}
+  \item Show how reaction, work-up, isolation, and purification become machine-executable operations.
+  \item Separate procedural abstraction from adaptive experiment selection.
+  \item Use diphenhydramine, rufinamide, and sildenafil only as evidence that the language controls multistep synthesis.
+\end{itemize}
+
+\solution{6.5cm}{%
+  \centering
+  \resizebox{0.94\linewidth}{!}{%
+    \begin{tikzpicture}[
+      box/.style={draw=darkBlue,fill=paleBlue,line width=1.5pt,minimum width=3.1cm,minimum height=1.0cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \node[box] (procedure) at (0,0) {written chemical\\procedure};
+      \node[box] (code) at (4.4,0) {chemical\\program};
+      \node[box] (graph) at (8.8,0) {hardware graph\\and compiler};
+      \node[box] (execute) at (13.2,0) {physical unit\\operations};
+      \draw[arrow] (procedure) -- (code);
+      \draw[arrow] (code) -- (graph);
+      \draw[arrow] (graph) -- (execute);
+      \node[label] at (6.6,-1.2) {programmability makes procedures transferable};
+    \end{tikzpicture}%
+  }
+}
+
+\section{From automated experimentation to a closed loop}
+
+\begin{itemize}
+  \item Identify sensors, analytical instruments, orchestration, decision logic, and model updating.
+  \item State that the loop is only closed when a measurement changes a subsequent experimental action.
+  \item Include data-quality gates, instrument status, and safe fallback behaviour.
+  \item Reuse Chapter~6's experiment-selection ideas and Chapter~7's execution and measurement infrastructure.
+\end{itemize}
+
+\solution{8.0cm}{%
+  \centering
+  \resizebox{0.86\linewidth}{!}{%
+    \begin{tikzpicture}[
+      stage/.style={draw=darkBlue,fill=paleBlue,line width=1.6pt,minimum width=3.0cm,minimum height=1.0cm,align=center,font=\sffamily},
+      update/.style={draw=darkGreen,fill=paleGreen,line width=1.8pt,minimum width=3.0cm,minimum height=1.0cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2.2pt}
+    ]
+      \node[stage] (select) at (0,3.0) {select};
+      \node[stage] (execute) at (4.4,3.0) {execute};
+      \node[stage] (measure) at (4.4,0) {measure and QC};
+      \node[update] (update) at (0,0) {update knowledge};
+      \draw[arrow] (select) -- (execute);
+      \draw[arrow] (execute) -- (measure);
+      \draw[arrow] (measure) -- (update);
+      \draw[arrow] (update) -- (select);
+    \end{tikzpicture}%
+  }
+}
+
+\section{Cooper: a mobile robotic chemist}
+
+\begin{itemize}
+  \item Use the mobile robot as an orchestration layer between existing laboratory instruments.\mcite{Burger2020}
+  \item Show the ten-variable photocatalyst-formulation search and batched Bayesian selection.
+  \item Discuss 688 experiments over eight days and the improvement over initial formulations.
+  \item Distinguish mobility, automation, and autonomous experiment selection.
+\end{itemize}
+
+\section{RoboChem}
+
+\begin{itemize}
+  \item Use the platform as the clearest true closed-loop optimisation case.\mcite{Slattery2024}
+  \item Identify flow photochemistry, phase sensing, inline NMR, Bayesian optimisation, and multiobjective choice.
+  \item Show optimisation, intensification, and scale-up as linked but distinct goals.
+  \item Ask which objectives and constraints are encoded and which chemical judgements remain external.
+\end{itemize}
+
+\section{Autonomous exploratory synthesis}
+
+\begin{itemize}
+  \item Use the 2024 Nature platform as the final course case.\mcite{Dai2024}
+  \item Show mobile robots connecting synthesis, UPLC-MS, and benchtop NMR.
+  \item Explain the heuristic planner, orthogonal analytical thresholds, replication, scale-up, diversification, and functional assays.
+  \item State explicitly that the demonstrated workflows are autonomous but are not closed-loop optimisation processes.
+  \item Use the unexpected cyclisation missed by the initial UPLC-MS decision rule to expose analytical and contextual limits.
+\end{itemize}
+
+\solution{7.2cm}{%
+  \centering
+  \resizebox{0.92\linewidth}{!}{%
+    \begin{tikzpicture}[
+      scalar/.style={draw=darkBlue,fill=paleBlue,line width=1.5pt,minimum width=4.4cm,minimum height=1.2cm,align=center,font=\sffamily},
+      explore/.style={draw=darkGreen,fill=paleGreen,line width=1.7pt,minimum width=4.4cm,minimum height=1.2cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \node[scalar] (opt) at (0,1.4) {scalar optimisation\\improve a defined objective};
+      \node[explore] (search) at (0,-1.4) {exploratory autonomy\\screen, classify, replicate, branch};
+      \node[scalar] (loop) at (7.0,1.4) {model update and\\next-point selection};
+      \node[explore] (rules) at (7.0,-1.4) {heuristic rules and\\orthogonal thresholds};
+      \draw[arrow] (opt) -- (loop);
+      \draw[arrow] (search) -- (rules);
+      \node[label] at (3.5,-2.4) {both are autonomous, but they answer different chemical questions};
+    \end{tikzpicture}%
+  }
+}
+
+\section{Robustness, error handling, and recovery}
+
+\begin{itemize}
+  \item Distinguish hardware faults, analytical anomalies, and chemically valid negative outcomes.
+  \item Include calibration checks, watchdogs, inventory tracking, reruns, and safe shutdown.
+  \item Require a record of why an experiment was rejected, repeated, or escalated to a human.
+  \item Show that autonomy without trustworthy failure handling simply accelerates unrecognised error.
+\end{itemize}
+
+\solution{7.0cm}{%
+  \centering
+  \resizebox{0.9\linewidth}{!}{%
+    \begin{tikzpicture}[
+      decision/.style={draw=darkBlue,fill=paleBlue,line width=1.5pt,minimum width=3.4cm,minimum height=1.0cm,align=center,font=\sffamily},
+      pass/.style={draw=darkGreen,fill=paleGreen,line width=1.5pt,minimum width=3.4cm,minimum height=1.0cm,align=center,font=\sffamily},
+      fail/.style={draw=darkRed,fill=paleRed,line width=1.5pt,minimum width=3.4cm,minimum height=1.0cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt}
+    ]
+      \node[decision] (qc) at (0,0) {measurement passes QC?};
+      \node[pass] (update) at (6,1.5) {update and continue};
+      \node[fail] (diagnose) at (6,-1.5) {diagnose: instrument,\\analysis, or chemistry};
+      \node[fail] (human) at (12,-1.5) {retry, safe stop,\\or human escalation};
+      \draw[arrow] (qc) -- node[above]{yes} (update);
+      \draw[arrow] (qc) -- node[below]{no} (diagnose);
+      \draw[arrow] (diagnose) -- (human);
+    \end{tikzpicture}%
+  }
+}
+
+\section{Human-in-the-loop and responsible autonomy}
+
+\begin{itemize}
+  \item Humans define the chemical problem, objectives, constraints, priors, and success criteria.
+  \item The system may select experiments only within that delegated decision space.
+  \item Discuss explainability at the level needed to audit why an experiment was chosen.
+  \item Include safety, resource use, reproducibility, and the cost of analysis in objective design.
+  \item Do not imply that automation removes the need for chemical judgement.
+\end{itemize}
+
+\section{Closing the course}
+
+\begin{itemize}
+  \item Reconnect the full progression: describe, model, choose, execute, autonomise.
+  \item Close with $\text{select}\rightarrow\text{execute}\rightarrow\text{measure}\rightarrow\text{update}\rightarrow\text{select}$.
+  \item Emphasise that every loop inherits the limitations of representation, data, measurement, model, and objective.
+  \item End with digital chemistry as scalable chemical reasoning rather than replacement of the chemist.
+\end{itemize}
+
+\begin{insightbox}
+  \keypoint{A self-driving laboratory is not one instrument.}
+  It is a tested relationship between a chemical objective, executable operations, trustworthy measurements, explicit decision logic, and safe recovery.
+\end{insightbox}
+
+\section{Summary and review}
+
+\begin{itemize}
+  \item Which operations are automated?
+  \item Is the procedure digitally programmable and transferable?
+  \item Which measurement changes the next decision?
+  \item Is the platform optimising a scalar objective or exploring several possible outcomes?
+  \item What happens when hardware, analysis, or chemistry fails?
+\end{itemize}
+
+\section*{Author production checklist: publication figures}
+
+\begin{itemize}
+  \item Merrifield and Stewart: the authentic synthesiser/process figure to establish repetitive predefined automation.
+  \item Steiner \textit{et al.}: Fig.~1 for abstraction and Chemputer architecture; Fig.~2 for information flow from written procedure and hardware graph to commands.
+  \item Burger \textit{et al.}: the platform/workflow figure and the search-trajectory/result figure from the final Nature PDF.
+  \item Slattery \textit{et al.}: Fig.~1 for the complete RoboChem concept; Fig.~2 for platform architecture and phase tracking; Fig.~3 for a representative optimisation campaign.
+  \item Dai \textit{et al.}: Fig.~1 for the modular laboratory and heuristic planner; Fig.~2 for divergent synthesis; Fig.~3 for autonomous host--guest discovery; Fig.~4 only if the photoreaction extension is discussed.
+\end{itemize}
+
+\section*{Author reading and PDF-download list}
+
+\begin{itemize}
+  \item Historical automated peptide synthesis.\mcite{Merrifield1965}
+  \item Chemputer and chemical programming language.\mcite{Steiner2019}
+  \item Mobile robotic chemist.\mcite{Burger2020}
+  \item RoboChem closed-loop flow photochemistry.\mcite{Slattery2024}
+  \item Autonomous exploratory synthetic chemistry.\mcite{Dai2024}
+\end{itemize}

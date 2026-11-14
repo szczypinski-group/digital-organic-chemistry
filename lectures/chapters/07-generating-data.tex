@@ -1,0 +1,240 @@
+% !TeX root = ../notes.tex
+% Planning version: section skeleton, content bullets, live TikZ, figure list, and reading list.
+
+\chapter{Generating high-quality chemical data}
+
+\begin{notebox}
+  \keypoint{Intellectual question:} How do we generate the high-quality, information-rich experimental datasets that modelling and experiment selection require?
+\end{notebox}
+
+\section{More experiments are not necessarily more information}
+
+\begin{itemize}
+  \item Distinguish experiment count, measurement density, chemical diversity, and information content.
+  \item Compare endpoint measurements with full reaction-progress curves.
+  \item Explain that throughput can amplify systematic error just as efficiently as it amplifies useful data.
+  \item Connect experimental design to the chemical question rather than to the maximum number of wells or samples.
+\end{itemize}
+
+\solution{6.5cm}{%
+  \centering
+  \resizebox{0.92\linewidth}{!}{%
+    \begin{tikzpicture}[
+      box/.style={draw=darkBlue,fill=paleBlue,line width=1.5pt,minimum width=3.8cm,minimum height=1.0cm,align=center,font=\sffamily},
+      good/.style={draw=darkGreen,fill=paleGreen,line width=1.5pt,minimum width=3.8cm,minimum height=1.0cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \node[box] (many) at (0,1.3) {many repeated endpoints};
+      \node[good] (rich) at (0,-1.3) {diverse, calibrated\\reaction profiles};
+      \node[box] (count) at (6,1.3) {high throughput};
+      \node[good] (info) at (6,-1.3) {high information content};
+      \draw[arrow] (many) -- (count);
+      \draw[arrow] (rich) -- (info);
+      \node[label] at (3,-2.2) {these are related, but not equivalent};
+    \end{tikzpicture}%
+  }
+}
+
+\section{Practical FAIR chemical data}
+
+\begin{itemize}
+  \item Define findable, accessible, interoperable, and reusable in laboratory terms.
+  \item State explicitly that FAIR does not necessarily mean open.
+  \item Include identifiers, machine-readable structures, units, instrument methods, calibrations, processing steps, and provenance.
+  \item Record unsuccessful, interrupted, and analytically ambiguous experiments rather than silently deleting them.
+  \item Use the FAIR principles as a compact reference, not as a separate informatics lecture.\mcite{Wilkinson2016}
+\end{itemize}
+
+\solution{7.2cm}{%
+  \centering
+  \resizebox{0.92\linewidth}{!}{%
+    \begin{tikzpicture}[
+      stage/.style={draw=darkBlue,fill=paleBlue,line width=1.5pt,minimum width=3.0cm,minimum height=0.9cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt},
+      note/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \node[stage] (identity) at (0,2.0) {chemical identity};
+      \node[stage] (conditions) at (4.2,2.0) {conditions and time};
+      \node[stage] (instrument) at (8.4,2.0) {instrument method};
+      \node[stage] (processing) at (8.4,0) {processing and QC};
+      \node[stage] (outcome) at (4.2,0) {outcome and uncertainty};
+      \node[stage] (provenance) at (0,0) {provenance and status};
+      \draw[arrow] (identity) -- (conditions);
+      \draw[arrow] (conditions) -- (instrument);
+      \draw[arrow] (instrument) -- (processing);
+      \draw[arrow] (processing) -- (outcome);
+      \draw[arrow] (outcome) -- (provenance);
+      \node[note] at (4.2,-1.1) {a reusable experimental record};
+    \end{tikzpicture}%
+  }
+}
+
+\section{High-throughput and parallel experimentation}
+
+\begin{itemize}
+  \item Introduce reaction arrays, well plates, liquid handling, and miniaturisation.
+  \item Compare broad categorical screens with dense local condition screens.
+  \item Include reagent identity checks, dosing accuracy, evaporation, mixing, sealing, and cross-contamination.
+  \item Treat unsuccessful experiments as part of the dataset when the analytical evidence supports that label.
+\end{itemize}
+
+\section{Measurement is part of the experiment}
+
+\begin{itemize}
+  \item Show sampling, quenching, dilution, calibration, LC, GC, MS, NMR, spectroscopy, and automated processing as parts of one measurement chain.
+  \item Distinguish ``no product'', ``below detection'', ``analysis failed'', and ``experiment failed''.
+  \item Include blanks, standards, replicates, retention-time drift, detector saturation, and data-quality flags.
+  \item Make the analytical bottleneck central to the design of automated campaigns.
+\end{itemize}
+
+\solution{5.8cm}{%
+  \centering
+  \resizebox{0.95\linewidth}{!}{%
+    \begin{tikzpicture}[
+      stage/.style={draw=darkCyan,fill=paleCyan,line width=1.5pt,minimum width=2.5cm,minimum height=0.9cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt}
+    ]
+      \node[stage] (reaction) at (0,0) {reaction};
+      \node[stage] (sample) at (3.4,0) {sample and\\quench};
+      \node[stage] (measure) at (6.8,0) {instrument\\measurement};
+      \node[stage] (process) at (10.2,0) {processing\\and calibration};
+      \node[stage] (record) at (13.6,0) {QC and\\record};
+      \draw[arrow] (reaction) -- (sample);
+      \draw[arrow] (sample) -- (measure);
+      \draw[arrow] (measure) -- (process);
+      \draw[arrow] (process) -- (record);
+    \end{tikzpicture}%
+  }
+}
+
+\section{Flow as a data-generation platform}
+
+\begin{itemize}
+  \item Introduce only the reactor concepts needed to understand the data.
+  \item Define residence time $\tau=V/Q$, steady state, lag, dispersion, and inline or at-line analysis.
+  \item Explain why continuous variables are natural in flow and why data points are not independent if the system has not equilibrated.
+  \item Compare parallel batch, serial flow, and hybrid architectures by task fit.
+\end{itemize}
+
+\solution{7.0cm}{%
+  \centering
+  \resizebox{0.94\linewidth}{!}{%
+    \begin{tikzpicture}[
+      box/.style={draw=darkBlue,fill=paleBlue,line width=1.5pt,minimum width=3.0cm,minimum height=1.0cm,align=center,font=\sffamily},
+      analyser/.style={draw=darkGreen,fill=paleGreen,line width=1.5pt,minimum width=3.0cm,minimum height=1.0cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \node[box] (feed) at (0,0) {reagent feeds};
+      \node[box] (reactor) at (4.3,0) {reactor\\$\tau=V/Q$};
+      \node[box] (steady) at (8.6,0) {steady-state\\sampling};
+      \node[analyser] (analysis) at (12.9,0) {inline or at-line\\analysis};
+      \draw[arrow] (feed) -- (reactor);
+      \draw[arrow] (reactor) -- (steady);
+      \draw[arrow] (steady) -- (analysis);
+      \node[label] at (6.4,-1.25) {lag and dispersion link neighbouring samples};
+    \end{tikzpicture}%
+  }
+}
+
+\section{High-throughput kinetics: Mayer}
+
+\begin{itemize}
+  \item Use the liquid-handling and continuous-UV workflow for acid/base catalysis in water.\mcite{KufferMayer2026}
+  \item Emphasise full kinetic curves rather than a single endpoint.
+  \item Show how a mechanistic rate model separates acid, base, buffer, and background contributions.
+  \item Use the change in relative substrate reactivity across catalytic regimes as evidence that information-rich data retain mechanistic value.
+  \item Bridge to Chapter~5 through leave-one-group-out validation and reactivity prediction.
+\end{itemize}
+
+\section{Automated synthesis and analysis: Bourne}
+
+\begin{itemize}
+  \item Introduce the stopped-flow architecture as an intermediate between batch and continuous flow.\mcite{Avila2022}
+  \item Discuss the integration of liquid handling, reaction timing, at-line analysis, and library synthesis.
+  \item Use the reported library campaign to compare throughput, reagent use, and synthesis success.
+  \item Treat the feed-forward neural network as a consumer of the generated data, not as the chapter's main subject.
+\end{itemize}
+
+\section{Cage discovery: Greenaway progression}
+
+\subsection{Computation fused with robotic synthesis}
+
+\begin{itemize}
+  \item Use the 78 precursor combinations and the complete positive, partial, and negative outcome matrix.\mcite{Greenaway2018}
+  \item Compare predicted topology and formation energy with experimental outcome.
+  \item Retain the unexpected cage-catenane result as evidence that systematic screening can reveal unplanned chemistry.
+\end{itemize}
+
+\subsection{Automated synthesis, characterisation, and analysis}
+
+\begin{itemize}
+  \item Use the 366-reaction campaign and the computational enumeration of hypothetical outcomes.\mcite{Basford2024}
+  \item Show automated turbidity, NMR, and HRMS analysis and how orthogonal measurements assign different aspects of outcome.
+  \item Use the released experiment map, code, and raw data as the strongest practical FAIR example.
+  \item Discuss the reduction in manual data-analysis burden without implying that all assignments become chemically trivial.
+\end{itemize}
+
+\section{Szczypiński cage automation}
+
+\begin{itemize}
+  \item Use computation to map the accessible cage conformers.\mcite{ShieldsCage2024}
+  \item Use the semi-automated high-throughput crystallisation screen to show execution at scale.
+  \item Discuss how solid-state structures ``lock'' otherwise dynamic conformers and therefore create information that solution data alone do not provide.
+  \item Classify this as genuine automation, but not autonomy or closed-loop optimisation.
+\end{itemize}
+
+\section{From execution to autonomy}
+
+\begin{itemize}
+  \item Close by separating machine execution from machine selection.
+  \item Chapter~7 ends when the system has generated, measured, quality-controlled, and recorded data.
+  \item Chapter~8 begins when those measurements determine what the platform does next.
+\end{itemize}
+
+\solution{5.8cm}{%
+  \centering
+  \begin{tikzpicture}[
+    auto/.style={draw=darkBlue,fill=paleBlue,line width=1.6pt,minimum width=4.4cm,minimum height=1.0cm,align=center,font=\sffamily},
+    autonomous/.style={draw=darkGreen,fill=paleGreen,line width=1.8pt,minimum width=4.4cm,minimum height=1.0cm,align=center,font=\sffamily},
+    arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt}
+  ]
+    \node[auto] (execute) at (0,1.4) {automation: execute a defined plan};
+    \node[auto] (record) at (0,0) {measure, QC, and record};
+    \node[autonomous] (decide) at (0,-1.4) {autonomy: use the result to choose next};
+    \draw[arrow] (execute) -- (record);
+    \draw[arrow] (record) -- (decide);
+  \end{tikzpicture}
+}
+
+\section{Summary and review}
+
+\begin{itemize}
+  \item Does the campaign increase experiment count, information content, or both?
+  \item Are identities, conditions, measurements, processing, and failures reusable?
+  \item Where is the analytical bottleneck?
+  \item Does the platform execute a plan or choose subsequent experiments?
+  \item Which parts of the workflow still require chemical judgement?
+\end{itemize}
+
+\section*{Author production checklist: publication figures}
+
+\begin{itemize}
+  \item Kuffer and Mayer: Fig.~3 for the high-throughput kinetic workflow; Fig.~4 for mechanism-guided decomposition; Fig.~6 only as the modelling bridge.
+  \item Avila \textit{et al.}: Fig.~1 for the stopped-flow platform; retain one later figure showing library success and one showing model validation, with numbering checked against the downloaded publisher PDF before extraction.
+  \item Greenaway \textit{et al.} (2018): Fig.~3 for precursor space, computation, and the complete experimental outcome matrix.
+  \item Basford \textit{et al.} (2024): Fig.~3 for the integrated experimental/computational workflow; Fig.~5 for all 366 automated outcomes; Fig.~6 for the outcome Sankey summary.
+  \item Shields \textit{et al.} (2024): Fig.~2 for the computed conformer landscape; Fig.~3 for the five experimentally observed conformations.
+\end{itemize}
+
+\section*{Author reading and PDF-download list}
+
+\begin{itemize}
+  \item FAIR guiding principles.\mcite{Wilkinson2016}
+  \item High-throughput information-rich kinetics.\mcite{KufferMayer2026}
+  \item Automated stopped-flow library synthesis.\mcite{Avila2022}
+  \item Computation fused with robotic cage synthesis.\mcite{Greenaway2018}
+  \item Automated porous-organic-cage discovery and analysis.\mcite{Basford2024}
+  \item Semi-automated cage crystallisation and conformer discovery.\mcite{ShieldsCage2024}
+\end{itemize}

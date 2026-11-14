@@ -1,0 +1,144 @@
+% !TeX root = ../notes.tex
+% Proposed prose version aligned to 08-autonomise-plan.tex.
+
+\chapter{From automated synthesis to self-driving chemistry}
+
+\begin{notebox}
+  \keypoint{What do you need to learn from this chapter?}
+  Automation, programmability, and autonomy describe different relationships between chemical procedures, laboratory hardware, measurements, and decisions.
+  A self-driving laboratory closes a tested loop in which reliable measurements influence subsequent experimental actions.
+\end{notebox}
+
+\section{Automation, programmability, and autonomy}
+
+Automation executes a predefined sequence of operations.
+It can improve reproducibility, throughput, safety, and access to conditions that are difficult to maintain manually.
+The scientific decisions may nevertheless have been made completely before the run begins.
+
+Programmability represents laboratory procedures in a digital form that can be stored, edited, versioned, and executed on compatible hardware.
+A programmable system separates the logical procedure from a particular sequence of manual actions.
+It does not become autonomous merely because the procedure is written as code.
+
+Autonomy requires a measurement to influence what the system does next.
+The decision can use a fitted model, an acquisition function, a heuristic rule, or a threshold.
+The essential feature is feedback from observed outcome to subsequent action.
+
+\begin{conceptbox}
+  \keypoint{Automation executes.}
+  \keypoint{Programmability represents and transfers.}
+  \keypoint{Autonomy measures and decides.}
+\end{conceptbox}
+
+\section{Automated peptide synthesis}
+
+Merrifield and Stewart's automated peptide synthesiser mechanised the repeated cycle required for solid-phase peptide synthesis.\mcite{Merrifield1965}
+Deprotection, washing, coupling, and washing can be performed in a predefined order for each residue in the sequence.
+The achievement is important because reliable repetition converts a demanding manual procedure into a scalable synthetic operation.
+
+The synthesiser does not decide which amino acid should be coupled after measuring the growing peptide.
+The complete sequence and operating logic are supplied before synthesis.
+It is therefore a clear historical example of automation without autonomy.
+
+\section{Chemputer and programmable synthesis}
+
+The Chemputer developed by Steiner and co-workers represents organic synthesis through programmable unit operations.\mcite{Steiner2019}
+A written procedure is translated into chemical code, combined with a graph describing the physical platform, and compiled into commands for pumps, valves, heaters, separators, filters, and evaporators.
+The abstraction allows reaction, work-up, isolation, and purification to be represented in one executable workflow.
+
+The reported syntheses of diphenhydramine, rufinamide, and sildenafil demonstrate that multistep procedures can be transferred into machine execution.
+The platform's central advance is programmability.
+The target and sequence are specified by the chemist rather than selected adaptively from analytical feedback.
+
+\section{From automated experimentation to a closed loop}
+
+A closed experimental loop requires more than a robot and an optimisation algorithm.
+The platform must prepare and execute experiments, acquire analytical data, convert instrument output into a quality-controlled response, update its state of knowledge, and select a subsequent action.
+Failures at any interface can break the scientific meaning of the loop even when every device continues to operate.
+
+Chapter~6 supplied strategies for choosing experiments from objectives, predictions, and uncertainty.
+Chapter~7 supplied execution, analysis, provenance, and failure states.
+Autonomy connects these capabilities so that a validated measurement causes a new experimental decision.
+
+\section{Cooper: a mobile robotic chemist}
+
+Burger and co-workers used a mobile robot to operate instruments distributed through a conventional laboratory.\mcite{Burger2020}
+The robot prepared photocatalyst formulations, transported samples, initiated experiments, and returned measurements to a batched Bayesian search.
+The campaign performed 688 experiments over eight days in a ten-variable space and identified mixtures substantially more active than the initial formulations.
+
+Mobility solves an orchestration problem because one robotic agent can connect instruments that were not designed as one enclosed platform.
+Bayesian selection supplies the autonomous element because completed measurements influence later batches.
+The case therefore combines physical mobility, automated execution, and adaptive decision-making.
+
+\section{RoboChem}
+
+RoboChem integrates flow photochemistry, phase tracking, inline NMR, and Bayesian optimisation in a closed loop.\mcite{Slattery2024}
+The platform can optimise continuous and categorical variables against objectives such as yield and productivity.
+It also links optimisation with process intensification and scale-up.
+
+The distinction between these tasks should remain explicit.
+Optimisation identifies favourable conditions within the defined search space.
+Intensification changes how efficiently material is produced, while scale-up tests whether the selected conditions transfer to a larger production objective.
+The platform is autonomous because measured reaction outcomes update the decision about the next conditions.
+
+\section{Autonomous exploratory synthesis}
+
+Dai and co-workers connected an automated synthesiser, UPLC-MS, and benchtop NMR using mobile robots and an application-agnostic heuristic planner.\mcite{Dai2024}
+A reaction advances only when orthogonal analytical measurements pass predefined, application-specific thresholds.
+The system can then request replication, scale-up, diversification, or a functional host--guest assay.
+
+These workflows are autonomous because measurements determine subsequent actions.
+They are not closed-loop optimisation processes because they do not repeatedly update a scalar response model to improve an objective.
+The distinction is productive rather than limiting.
+Exploratory chemistry can require branching decisions among identity, reproducibility, scale-up, and function rather than movement towards one numerical optimum.
+
+The study also exposes the limits of automated context.
+An unexpected cyclisation was not recognised by the initial UPLC-MS rule and required later human interpretation.
+Orthogonal measurements reduce ambiguity, but an autonomous planner can reason only with the signals, thresholds, and chemical representations available to it.
+
+\begin{warningbox}
+  \keypoint{Autonomous does not necessarily mean optimising.}
+  A system can make consequential experimental decisions through rules and analytical thresholds without fitting and updating an optimisation model.
+\end{warningbox}
+
+\section{Robustness, error handling, and recovery}
+
+An autonomous platform must distinguish a chemical negative result from a hardware or analytical failure.
+A blocked line, missed injection, exhausted reagent, detector drift, failed integration, and genuinely inactive reaction require different responses.
+Quality-control rules should determine whether a result is accepted, repeated, diagnosed, or escalated.
+
+Safe recovery includes instrument watchdogs, calibration checks, inventory tracking, bounded retries, and a defined shutdown state.
+Every rejected or repeated experiment should retain a traceable reason.
+Without this record, the decision history cannot be audited and a later model may treat fault-generated values as chemistry.
+
+\section{Human-in-the-loop and responsible autonomy}
+
+Humans define the chemical problem, objective, constraints, permitted actions, and evidence required for success.
+The autonomous system chooses only within that delegated decision space.
+Chemical judgement remains necessary when objectives conflict, measurements are ambiguous, or the system encounters chemistry outside its representation.
+
+Responsible deployment also requires considering resource use and safety.
+An objective that rewards yield alone can direct a platform towards expensive, hazardous, or wasteful conditions unless those consequences are represented as objectives or constraints.
+Explainability should be sufficient to reconstruct why an experiment was selected and which evidence caused the next action.
+
+\section{Closing the course}
+
+The course began by translating molecules into representations that computers can compare.
+It then used descriptors to map chemical space, models to connect representation with response, selection strategies to choose experiments, and automated platforms to execute and measure them.
+Autonomy closes the loop:
+\begin{equation}
+  \text{select}\longrightarrow\text{execute}\longrightarrow\text{measure}\longrightarrow\text{update}\longrightarrow\text{select}.
+\end{equation}
+
+Every stage inherits limitations from the earlier stages.
+A poor representation hides relevant chemistry, a biased dataset distorts the model, an inappropriate objective rewards the wrong outcome, and an unreliable measurement corrupts the feedback signal.
+A self-driving laboratory is therefore not one instrument or one algorithm.
+It is a validated relationship between a chemical objective, executable operations, trustworthy measurements, explicit decision logic, and safe recovery.
+
+\section{Summary}
+
+Automation, programmability, and autonomy should be distinguished by what is executed, represented, measured, and decided.
+Automated peptide synthesis demonstrates predefined repetitive execution.
+The Chemputer demonstrates transferable digital procedures.
+The mobile robotic chemist and RoboChem close optimisation loops through measured feedback.
+The 2024 exploratory-synthesis platform demonstrates autonomous branching without claiming closed-loop optimisation.
+Human judgement remains responsible for objectives, constraints, interpretation, and intervention.

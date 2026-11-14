@@ -1,0 +1,138 @@
+% !TeX root = ../notes.tex
+% Proposed prose version aligned to 06-choose-plan.tex.
+
+\chapter{Choosing the next experiment}
+
+\begin{notebox}
+  \keypoint{What do you need to learn from this chapter?}
+  Reaction optimisation is an experiment-selection problem defined by variables, objectives, constraints, available observations, and uncertainty.
+  This chapter compares fixed and sequential strategies, then asks how chemical boundaries limit apparently rational recommendations.
+\end{notebox}
+
+\section{What is being optimised?}
+
+An optimisation problem begins with a decision space.
+Continuous variables can include temperature, time, concentration, pressure, flow rate, and reagent equivalents.
+Categorical variables can include solvent, catalyst, ligand, base, or reactor architecture.
+The feasible space is smaller than the formal set of combinations because solubility, equipment limits, safety, and chemical compatibility exclude some experiments.
+
+The objective defines what counts as improvement.
+A reaction with the highest analytical yield may not have the best isolated yield, selectivity, productivity, process mass intensity, cost, or hazard profile.
+The objective function therefore encodes priorities rather than revealing a universal optimum.
+
+\begin{conceptbox}
+  \keypoint{An optimiser does not discover what ``best'' means.}
+  It searches according to the objective and constraints supplied by the chemist.
+\end{conceptbox}
+
+\section{One variable at a time and hidden interactions}
+
+One-variable-at-a-time optimisation changes one condition while holding the others fixed.
+The procedure is intuitive, produces plots that are easy to interpret locally, and can be practical when experiments are expensive or difficult to reconfigure.
+Its weakness is that the result depends on the starting point and on the order in which variables are examined.
+
+An interaction occurs when the effect of one variable depends on the level of another.
+For example, increasing temperature may improve conversion with one base but accelerate decomposition with another.
+An OVAT experiment performed at only one base identity cannot reveal the full interaction.
+The resulting path can stop at a locally favourable setting while missing a better region elsewhere in the response surface.
+
+\section{Factorial thinking, design of experiments, and response surfaces}
+
+Factorial designs vary several factors together so that main effects and interactions can be estimated.
+A full factorial design measures every combination of the selected levels, while a fractional design uses a subset chosen to preserve specified information.
+The important chemical question is not whether every combination is measured, but which effects become distinguishable within the experimental budget.
+
+Two-level designs approximate the response locally as a plane.
+Centre points and response-surface designs provide evidence for curvature when a linear local description is inadequate.
+The fitted surface remains empirical, but it can identify influential variables, interactions, and promising regions more efficiently than a long sequence of uncoordinated tests.
+
+\section{Sequential experimentation}
+
+A fixed design is chosen before its outcomes are known.
+A sequential campaign uses each completed round to update the description of the response and to choose subsequent experiments.
+This adaptivity can concentrate measurements near promising, uncertain, or chemically informative regions.
+
+Sequential does not necessarily mean one experiment at a time.
+A batch can be selected when reactions run in parallel or when instrument scheduling dominates the cost.
+The price of batching is that experiments within the batch are chosen before their neighbours have returned results.
+A stopping rule is also required, such as reaching a target, exhausting the budget, or observing little expected improvement.
+
+\section{Prediction with uncertainty}
+
+A surrogate model approximates the expensive experimental response using the observations collected so far.
+Gaussian-process models are useful conceptually because they return both a mean prediction and an uncertainty estimate over the search space.
+The uncertainty is generally smaller near informative observations and larger in poorly sampled regions.
+
+This uncertainty is conditional on the chosen model and representation.
+It does not guarantee that a hidden mechanism, decomposition pathway, or analytical failure has been considered.
+Experimental noise, model uncertainty, and ignorance of missing chemistry should not be collapsed into one unqualified confidence interval.
+
+\section{Bayesian optimisation}
+
+Bayesian optimisation combines a surrogate model with an acquisition function.
+The acquisition function ranks candidate experiments by balancing predicted performance and uncertainty.
+Exploitation selects a condition expected to perform well, while exploration selects a condition that may improve the model or reveal an unsampled region.
+Expected improvement is one way to combine these motives into a single ranking.
+
+Shields and co-workers benchmarked Bayesian reaction optimisation across several reaction datasets and compared machine recommendations with human decisions.\mcite{Shields2021}
+The study shows why optimisation quality should be evaluated over complete trajectories rather than by displaying only the final successful condition.
+A method that repeatedly reaches good regions with fewer experiments is more useful than one that occasionally finds an excellent point by chance.
+
+\section{Multiple objectives and constraints}
+
+Chemical optimisation often has several objectives.
+Yield and selectivity may conflict with productivity, solvent use, energy demand, cost, or hazard.
+A solution is dominated when another tested or predicted solution is at least as good in every objective and better in at least one.
+The non-dominated solutions form a Pareto front.
+
+The Pareto front does not choose among the trade-offs.
+It exposes the consequences of prioritising one objective over another.
+A chemist or process team must still decide whether a small gain in yield justifies additional waste, cost, or risk.
+Unsafe or technically impossible regions should be represented as constraints rather than rewarded merely because the model is uncertain there.
+
+\section{Pidko--Kalikadien: why model-guided choice can fail}
+
+\subsection{Experimental-data and domain warning}
+
+Kalikadien and co-workers generated 3552 measurements for rhodium-catalysed asymmetric hydrogenation across catalyst, substrate, solvent, pressure, temperature, and time choices.\mcite{Kalikadien2024}
+The dataset contained many more negative or poor outcomes than the corresponding literature record.
+This difference demonstrates how publication and selection practices alter the response distribution seen by a model.
+
+The models described behaviour inside the sampled campaign more successfully than they generalised to chemistry outside it.
+Expensive calculated descriptors did not automatically remove the limitation.
+The case therefore changes the optimisation question from ``which algorithm should choose next?'' to ``what evidence shows that the candidate belongs to a domain where model-guided choice is meaningful?''
+
+\subsection{Representation and conformational warning}
+
+Baidun and co-workers examined descriptors for rhodium asymmetric-hydrogenation complexes using generic precatalyst and substrate-specific structures.\mcite{Baidun2024}
+Substrate coordination altered the number, energy, and geometry of accessible conformers.
+The associated steric and electronic descriptors therefore depended on which chemical complex and conformational ensemble was represented.
+
+A virtual screen built from one convenient geometry can look numerically precise while omitting flexibility induced by the reacting substrate.
+The lesson is not that every optimisation requires the most expensive calculation.
+The lesson is that representation error must be considered before uncertainty from the fitted model is used to rank experiments.
+
+\section{Optimisation across chemical boundaries}
+
+A surrogate model usually assumes that the response changes smoothly enough to learn from nearby experiments.
+A mechanistic boundary can violate that assumption when a catalyst changes ligation state, a different pathway becomes dominant, or a new phase appears.
+The optimiser may cross the boundary and report improved conditions without recognising that the chemical regime has changed.
+
+Abrupt residuals, changes in selectivity pattern, inconsistent analytical signals, or loss of model calibration should therefore trigger chemical investigation.
+Orthogonal analysis and targeted mechanistic experiments can be more valuable at that point than another round of numerical optimisation.
+Finding better conditions is not automatically the same as understanding why they are better.
+
+\section{Covering space versus choosing the next experiment}
+
+Chapter~4 selected representative molecules to cover a defined chemical space.
+That operation is useful when an initial set should span a representation without reference to a measured response.
+Chapter~6 instead selects an experiment because it serves an objective, reduces relevant uncertainty, or is expected to improve the current state of knowledge.
+A representative point may be a sensible initial experiment, but coverage alone does not determine the best next experiment after outcomes are available.
+
+\section{Summary}
+
+Optimisation requires explicit variables, objectives, constraints, budgets, and stopping rules.
+Factorial designs reveal interactions that OVAT can miss, while sequential designs allow observations to change later choices.
+Bayesian optimisation combines prediction and uncertainty through an acquisition function.
+Multiobjective optimisation identifies trade-offs rather than one universal optimum.
+Dataset bias, representation choice, conformational dependence, and mechanistic boundaries limit the trust that should be placed in model-guided recommendations.

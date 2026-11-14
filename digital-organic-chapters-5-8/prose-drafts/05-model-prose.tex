@@ -1,0 +1,155 @@
+% !TeX root = ../notes.tex
+% Proposed prose version.
+% This is an editable alternative chapter draft aligned to 05-model-plan.tex.
+
+\chapter{Modelling chemical reactivity}
+
+\begin{notebox}
+  \keypoint{What do you need to learn from this chapter?}
+  Molecular descriptors become useful for prediction only when they are connected to a defined chemical response, a defensible dataset, and an appropriate model.
+  This chapter develops the physical-organic idea of relating structure to reactivity or selectivity, then asks how far a fitted relationship can be interpreted and trusted.
+\end{notebox}
+
+\section{From describing molecules to modelling chemistry}
+
+Chapter~4 represented molecules as points in chemical space.
+That description did not require a measured chemical outcome because the objective was to compare molecules, visualise their relationships, and choose representative examples.
+A reactivity model introduces a response such as rate, conversion, yield, regioselectivity, or enantioselectivity.
+
+For $n$ experiments described by $p$ features, the inputs can be collected in a descriptor matrix $\mathbf{X}$ and the measured responses in a vector $\mathbf{y}$.
+A fitted model seeks a relationship
+\begin{equation}
+  \hat{\mathbf{y}}=f(\mathbf{X}).
+\end{equation}
+The hat on $\hat{\mathbf{y}}$ matters because the model produces predictions rather than the experimental observations themselves.
+
+\begin{conceptbox}
+  \keypoint{Representation, response, and model are separate choices.}
+  Changing any one of them can change the apparent success of the modelling exercise and the chemical conclusions drawn from it.
+\end{conceptbox}
+
+\section{Physical-organic relationships as models}
+
+Physical-organic chemistry has long used numerical relationships to connect molecular structure with chemical behaviour.
+The Hammett relationship is a simple example because one substituent parameter, $\sigma_{\mathrm{X}}$, is related to a logarithmic rate or equilibrium response through the reaction constant $\rho$.
+The model is useful not because every substituted reaction lies perfectly on one line, but because the sign, magnitude, and failures of the relationship can be interpreted chemically.
+
+Modern quantitative structure--selectivity relationships extend the same idea to several descriptors,
+\begin{equation}
+  y=\beta_0+\beta_1x_1+\beta_2x_2+\cdots+\beta_px_p+\varepsilon.
+\end{equation}
+The fitted coefficients describe how the response changes within the sampled dataset when the associated descriptors vary.
+They do not automatically establish that those descriptors are causal variables in the reaction mechanism.
+
+\section{Data, representation, and algorithm}
+
+A modelling project should begin by defining the desired domain rather than by selecting an algorithm.
+The domain specifies which substrates, catalysts, reagents, conditions, and response values the model is expected to cover.
+The experimental budget, measurement method, and expected precision then constrain which parts of that domain can be sampled.
+Raghavan and co-workers organise these decisions into a dataset-design workflow that moves from task definition and experimental constraints to deliberate component selection, data collection, and modelling.\mcite{Raghavan2023}
+
+Chemical datasets are not interchangeable.
+High-throughput experiments may provide many internally consistent measurements over a deliberately chosen region, but they can remain chemically narrow.
+Published reaction scopes contain chemically curated examples, but often contain few unsuccessful experiments and may change several structural features at once.
+Literature databases increase scale at the cost of heterogeneous procedures, analytical methods, and reporting conventions.
+
+The response distribution also affects the sensible modelling task.
+A dataset containing a large population of inactive reactions and a smaller continuum of productive reactions may be treated as a classification problem, a regression problem, or a staged combination of both.
+Haas, Kalyani, and Sigman show how response distributions, sparse data, negative results, and validation choices should inform the modelling strategy.\mcite{Haas2025}
+
+\section{Interpretable multivariate models}
+
+Multiple linear regression is attractive because its mathematical form is transparent and its descriptors can be chemically motivated.
+Interpretability nevertheless depends on more than being able to read a coefficient table.
+If two descriptors carry nearly the same information, their fitted coefficients may be unstable even when the combined predictions remain satisfactory.
+Scaling, descriptor selection, repeated fitting, and inspection of correlations are therefore part of chemical interpretation rather than optional preprocessing.
+
+A fitted model must be tested on data that were not used to determine its parameters.
+A random row split is useful only when the intended future prediction resembles another random row from the same population.
+If the scientific question concerns a new substrate family, catalyst scaffold, or reagent class, then the corresponding component should be held out during validation.
+
+Residuals are the differences between observed and predicted responses.
+Small, unstructured residuals are consistent with a model capturing the dominant relationship over the sampled domain.
+A group of residuals associated with one substrate class, catalyst family, or condition range can instead indicate a missing descriptor, a measurement problem, or a change in chemical regime.
+
+\begin{insightbox}
+  \keypoint{A residual can be chemically informative.}
+  The question is not only how large the error is, but whether the error has chemical structure.
+\end{insightbox}
+
+\section{Reactivity cliffs and mechanistic regimes}
+
+A smooth model assumes that similar inputs tend to produce similar responses.
+Reactivity cliffs violate that expectation because a small change in representation is associated with a large change in chemical outcome.
+Such cliffs can expose a boundary between catalytic states or mechanisms that is compressed into one descriptor space.
+
+Newman-Stonebraker and co-workers combined data from nickel- and palladium-catalysed cross-coupling reactions with descriptors from the \textit{kraken} phosphine library.\mcite{NewmanStonebraker2021}
+Minimum buried volume separated active and inactive ligand regimes close to a threshold, whereas cone angle did not provide the same useful classification.
+Spectroscopic studies then connected the descriptor boundary to phosphine ligation state at nickel.
+The case is powerful because the statistical separation is supported by an experimentally testable chemical interpretation.
+
+\begin{warningbox}
+  A sharp statistical boundary should prompt a chemical question.
+  It should not be labelled as a mechanistic boundary until independent evidence supports that interpretation.
+\end{warningbox}
+
+\section{Predicting catalyst selectivity}
+
+\subsection{Designed catalyst space: Denmark}
+
+Zahrt and co-workers began from a large in-silico library of synthetically accessible chiral phosphoric-acid catalysts.\mcite{Zahrt2019}
+They calculated conformer-aware average steric occupancy descriptors and selected a representative training subset from the resulting catalyst space.
+The training set was therefore designed to cover the representation rather than assembled only from familiar catalysts.
+
+The study then tested predictions for new substrate combinations and catalysts outside the experimentally observed training combinations.
+This distinction is important because a predicted response can lie beyond the selectivity values observed during training while the corresponding catalyst remains inside the sampled descriptor domain.
+Response-range extrapolation and chemical-space extrapolation are related but not identical risks.
+
+\subsection{Nonlinear quantum-descriptor model: Sunoj}
+
+Singh and co-workers assembled asymmetric-hydrogenation data across several catalyst families and represented catalysts and substrates using quantum-derived descriptors.\mcite{Singh2020}
+Random-forest models captured nonlinear relationships that would be difficult to express through a small linear equation.
+Performance decreased as the external test set became more chemically distinct from the training catalyst families, illustrating that chemical novelty is a graded rather than binary concept.
+
+The authors also used a decision tree to identify descriptors associated with high predicted selectivity.
+Those branches provide hypotheses about useful combinations of catalyst and substrate properties.
+They do not by themselves prove which interactions control the transition state.
+
+\section{When should a prediction be trusted?}
+
+A model's applicability domain is the region over which there is evidence that its predictions remain reliable.
+The domain depends on the sampled chemistry, the representation, the response, and the model.
+It cannot be established from an algorithm name alone.
+
+Interpolation estimates responses between well-supported regions of the training data.
+Extrapolation places the prediction in a region where the model has little or no direct support.
+A point can appear numerically close to training data while belonging to a different mechanism, and a point can appear distant because the chosen descriptors emphasise irrelevant structural differences.
+Applicability is therefore a chemical judgement supported by numerical diagnostics rather than a single universal distance threshold.
+
+Validation should reproduce the novelty expected in use.
+Random reaction splits estimate performance for unseen rows drawn from the same mixture of components.
+Component-held-out, scaffold-held-out, or time-split validation can test stronger claims about unfamiliar chemistry.
+The workshop returns to this distinction through the rule that an unseen experiment is not necessarily unseen chemistry.
+
+\section{Prediction is not explanation}
+
+Predictive success shows that a relationship is useful for estimating a response over a tested domain.
+Mechanistic explanation requires evidence that the proposed variables and causal story survive intervention and independent measurement.
+A descriptor may be important because it correlates with the true controlling variable, because it identifies a family of molecules, or because it leaks information about the response.
+
+\begin{warningbox}
+  \keypoint{Feature importance is not automatically mechanistic importance.}
+  A model can return a precise numerical prediction even when the chemistry provides no reason to trust it.
+\end{warningbox}
+
+The most productive modelling studies use prediction and chemical interpretation together.
+They report the domain, validation design, residuals, and failures, and they use surprising predictions to motivate new experiments.
+This prepares the transition to Chapter~6, where the central problem is no longer only what the model predicts, but which experiment should be performed next.
+
+\section{Summary}
+
+Molecular representations become model inputs when they are paired with a defined chemical response.
+Physical-organic relationships provide a chemistry-led route from one-variable correlations to interpretable multivariate models.
+Dataset design, response distribution, validation, and applicability domain determine which prediction claims are defensible.
+Residuals and reactivity cliffs can reveal missing chemistry or regime changes.
+Predictive performance supports use within a tested domain, but it does not by itself establish a mechanism.

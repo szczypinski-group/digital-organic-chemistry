@@ -1,0 +1,234 @@
+% !TeX root = ../notes.tex
+% Planning version: section skeleton, content bullets, live TikZ, figure list, and reading list.
+% This file is deliberately not final student prose.
+
+\chapter{Modelling chemical reactivity}
+
+\begin{notebox}
+  \keypoint{Intellectual question:} Can molecular representations and descriptors explain or predict chemical behaviour, and when should such predictions be trusted?
+\end{notebox}
+
+\section{From describing molecules to modelling chemistry}
+
+\begin{itemize}
+  \item Hand off explicitly from Chapter~4: descriptors position molecules in a chosen chemical space.
+  \item Introduce the descriptor matrix $\mathbf{X}$, response vector $\mathbf{y}$, and model $f$.
+  \item Distinguish the representation, the measured response, and the fitted relationship.
+  \item State that the same representation can support different models and that different representations can support different conclusions.
+\end{itemize}
+
+\solution{7.0cm}{%
+  \centering
+  \resizebox{0.94\linewidth}{!}{%
+    \begin{tikzpicture}[
+      box/.style={draw=darkBlue,fill=paleBlue,line width=1.6pt,minimum width=3.5cm,minimum height=1.1cm,align=center,font=\sffamily},
+      response/.style={draw=darkGreen,fill=paleGreen,line width=1.6pt,minimum width=3.5cm,minimum height=1.1cm,align=center,font=\sffamily},
+      arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \node[box] (molecules) at (0,0) {molecules or reactions};
+      \node[box] (descriptors) at (5,0) {representation\\$\mathbf{X}$};
+      \node[box] (model) at (10,0) {model\\$f(\mathbf{X})$};
+      \node[response] (response) at (15,0) {chemical response\\$\mathbf{y}$};
+      \draw[arrow] (molecules) -- (descriptors);
+      \draw[arrow] (descriptors) -- (model);
+      \draw[arrow] (model) -- (response);
+      \node[label] at (7.5,-1.25) {a numerical prediction is not yet a chemical explanation};
+    \end{tikzpicture}%
+  }
+}
+
+\section{Physical-organic relationships as models}
+
+\begin{itemize}
+  \item Recall Hammett and Taft relationships as compact models of chemical response.
+  \item Move from one explanatory coordinate to multivariate quantitative structure--selectivity relationships.
+  \item Explain that an interpretable model is useful only when its descriptors, response, and domain are chemically meaningful.
+  \item Use the physical-organic tradition as the chapter's organising philosophy rather than presenting an algorithm catalogue.
+\end{itemize}
+
+\solution{5.2cm}{%
+  \centering
+  \begin{tikzpicture}[
+    term/.style={draw=darkBlue,fill=paleBlue,line width=1.5pt,minimum width=4.5cm,minimum height=0.9cm,align=center,font=\sffamily},
+    arrow/.style={->,>=Stealth,draw=darkGrey,line width=2pt}
+  ]
+    \node[term] (lfer) at (0,2.6) {$\log(k_{\mathrm{X}}/k_{\mathrm{H}})=\rho\sigma_{\mathrm{X}}$};
+    \node[term] (qssr) at (0,1.3) {$y=\beta_0+\beta_1x_1+\cdots+\beta_px_p$};
+    \node[term] (chem) at (0,0) {chemical interpretation and prediction};
+    \draw[arrow] (lfer) -- (qssr);
+    \draw[arrow] (qssr) -- (chem);
+  \end{tikzpicture}
+}
+
+\section{Data, representation, and algorithm}
+
+\begin{itemize}
+  \item Define the desired domain before collecting data.
+  \item Separate output choice, molecular or reaction representation, and fitting algorithm.
+  \item Compare HTE data, literature data, and conventional substrate-scope data.
+  \item Discuss missing values, measurement error, negative results, response imbalance, and leakage.
+  \item Use the dataset-design workflow of Raghavan and co-workers as the organising figure.\mcite{Raghavan2023}
+  \item Use Haas, Kalyani, and Sigman as a practical reference for choosing regression or classification with sparse synthetic datasets.\mcite{Haas2025}
+\end{itemize}
+
+\section{Interpretable multivariate models}
+
+\begin{itemize}
+  \item Introduce multiple linear regression as a chemical relationship, not merely a fitting procedure.
+  \item Explain correlated descriptors, regularisation only at a conceptual level, and the instability of coefficient interpretation.
+  \item Separate fitting from validation.
+  \item Introduce chemically meaningful holdouts, repeated measurements, and uncertainty in the response.
+  \item Treat residuals as possible evidence for missing chemistry, a regime change, or a measurement problem.
+\end{itemize}
+
+\solution{7.0cm}{%
+  \centering
+  \resizebox{0.88\linewidth}{!}{%
+    \begin{tikzpicture}[
+      axis/.style={draw=darkGrey,line width=1.4pt,->,>=Stealth},
+      datum/.style={fill=darkBlue,draw=darkBlue},
+      outlier/.style={fill=darkRed,draw=darkRed},
+      fit/.style={draw=darkGreen,line width=2.2pt},
+      residual/.style={draw=darkRed,dashed,line width=1.6pt,<->,>=Stealth},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \draw[axis] (0,0) -- (8,0) node[below] {predicted response};
+      \draw[axis] (0,0) -- (0,6) node[left,rotate=90] {observed response};
+      \draw[fit] (0.5,0.5) -- (7.3,5.7);
+      \foreach \x/\y in {1.0/0.9,1.8/1.6,2.6/2.3,3.5/3.0,4.4/3.7,5.2/4.4,6.2/5.0}{\fill[datum] (\x,\y) circle (3pt);}
+      \fill[outlier] (5.7,2.0) circle (4pt);
+      \draw[residual] (5.7,2.0) -- (5.7,4.55);
+      \node[label,text=darkRed,anchor=west] at (5.9,3.2) {error, missing variable,\\or new chemical regime?};
+    \end{tikzpicture}%
+  }
+}
+
+\section{Reactivity cliffs and mechanistic regimes}
+
+\begin{itemize}
+  \item Define a reactivity cliff as a discontinuous change in outcome across a small region of descriptor space.
+  \item Use the Sigman--Doyle phosphine study as the principal case.\mcite{NewmanStonebraker2021}
+  \item Show how minimum buried volume classifies ligand reactivity and ligation state near a threshold.
+  \item Connect the statistical boundary to experimentally verified $L_1$ versus $L_2$ nickel complexes.
+  \item Emphasise that the descriptor threshold is valuable because it is tied to chemical evidence.
+\end{itemize}
+
+\solution{6.5cm}{%
+  \centering
+  \resizebox{0.9\linewidth}{!}{%
+    \begin{tikzpicture}[
+      axis/.style={draw=darkGrey,line width=1.4pt,->,>=Stealth},
+      low/.style={fill=darkBlue,draw=darkBlue},
+      high/.style={fill=darkRed,draw=darkRed},
+      boundary/.style={draw=darkYellow,line width=2.4pt,dashed},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \draw[axis] (0,0) -- (10,0) node[below] {steric descriptor};
+      \draw[axis] (0,0) -- (0,5.7) node[left,rotate=90] {reactivity};
+      \foreach \x/\y in {0.8/0.5,1.5/0.7,2.2/0.6,3.0/0.9,3.7/0.8,4.3/1.0}{\fill[low] (\x,\y) circle (3.2pt);}
+      \foreach \x/\y in {5.6/4.3,6.3/4.8,7.0/4.5,7.8/5.0,8.6/4.7,9.2/5.1}{\fill[high] (\x,\y) circle (3.2pt);}
+      \draw[boundary] (5.0,0.2) -- (5.0,5.4);
+      \node[label] at (2.6,4.8) {$L_2$ regime};
+      \node[label] at (7.5,1.1) {$L_1$ regime};
+      \node[label,text=darkYellow] at (5.0,5.8) {mechanistic boundary};
+    \end{tikzpicture}%
+  }
+}
+
+\section{Predicting catalyst selectivity}
+
+\subsection{Designed catalyst space: Denmark}
+
+\begin{itemize}
+  \item Use an in-silico catalyst library and a representative training subset.
+  \item Explain conformer-aware average steric occupancy descriptors.
+  \item Distinguish response extrapolation from descriptor-space extrapolation.
+  \item Examine external catalyst and substrate tests rather than relying on a random row split.\mcite{Zahrt2019}
+\end{itemize}
+
+\subsection{Nonlinear quantum-descriptor model: Sunoj}
+
+\begin{itemize}
+  \item Use quantum-derived catalyst and substrate descriptors across several catalyst families.
+  \item Compare family-specific and unified random-forest models.
+  \item Discuss external-family prediction and the changing difficulty of chemical generalisation.
+  \item Treat decision-tree feature rankings as hypothesis generation, not mechanistic proof.\mcite{Singh2020}
+\end{itemize}
+
+\section{When should a prediction be trusted?}
+
+\begin{itemize}
+  \item Define an applicability domain in chemical rather than purely numerical language.
+  \item Contrast interpolation, response extrapolation, and representation-space extrapolation.
+  \item Explain why a random reaction split can place nearly identical chemistry in training and test sets.
+  \item Prefer component-held-out or scaffold-held-out tests when the question concerns unfamiliar chemistry.
+  \item Ask whether the proposed reaction belongs to the same mechanistic regime as the training data.
+\end{itemize}
+
+\solution{7.5cm}{%
+  \centering
+  \resizebox{0.9\linewidth}{!}{%
+    \begin{tikzpicture}[
+      axis/.style={draw=darkGrey,line width=1.4pt,->,>=Stealth},
+      region/.style={fill=paleBlue,draw=darkBlue,line width=1.4pt,opacity=0.8},
+      train/.style={fill=darkBlue,draw=darkBlue},
+      interp/.style={fill=darkGreen,draw=darkGreen},
+      extra/.style={fill=darkRed,draw=darkRed},
+      label/.style={font=\small\sffamily,text=darkGrey,align=center}
+    ]
+      \draw[axis] (0,0) -- (10,0) node[below] {descriptor 1};
+      \draw[axis] (0,0) -- (0,6) node[left,rotate=90] {descriptor 2};
+      \fill[region] plot[smooth cycle,tension=0.8] coordinates {(1.0,1.2) (2.0,4.7) (5.2,5.2) (7.2,3.6) (6.4,1.1) (3.0,0.8)};
+      \foreach \x/\y in {1.8/2.0,2.3/3.6,3.1/1.6,3.8/4.4,4.6/2.6,5.3/3.8,5.9/1.8,6.4/3.1}{\fill[train] (\x,\y) circle (3pt);}
+      \fill[interp] (4.4,3.3) circle (5pt);
+      \fill[extra] (8.8,5.1) circle (5pt);
+      \node[label,text=darkGreen] at (4.4,2.7) {interpolation};
+      \node[label,text=darkRed] at (8.2,5.6) {extrapolation};
+      \node[label] at (4.0,0.35) {training domain};
+    \end{tikzpicture}%
+  }
+}
+
+\section{Prediction is not explanation}
+
+\begin{itemize}
+  \item Separate predictive performance from causal or mechanistic interpretation.
+  \item Explain that correlated descriptors can exchange apparent importance without changing model performance.
+  \item Require intervention, orthogonal measurement, or mechanistic experiments before elevating a model feature into a mechanistic claim.
+  \item Close with the rule: a model can always return a number, but chemistry determines whether the number deserves trust.
+\end{itemize}
+
+\begin{warningbox}
+  \keypoint{Feature importance is not automatically mechanistic importance.}
+\end{warningbox}
+
+\section{Summary and review}
+
+\begin{itemize}
+  \item What was predicted?
+  \item Which molecules, catalysts, substrates, and conditions define the domain?
+  \item Which representation and validation split were used?
+  \item Where are the residuals and chemical cliffs?
+  \item What evidence supports explanation rather than prediction alone?
+\end{itemize}
+
+\section*{Author production checklist: publication figures}
+
+\begin{itemize}
+  \item Newman-Stonebraker \textit{et al.}: Fig.~1 for phosphines, descriptors, and conformers; Fig.~2 for the activity cliffs; Fig.~3 for the spectroscopic ligation-state test.
+  \item Raghavan \textit{et al.}: Fig.~1 for the dataset-design workflow; optionally Fig.~4 for intentional component selection.
+  \item Zahrt \textit{et al.}: Fig.~1 for the complete workflow; Fig.~3 for representative training-set construction; Fig.~7 for external tests; Fig.~8 only for the response-range extrapolation discussion.
+  \item Singh \textit{et al.}: Fig.~1 for catalyst families and descriptor scope; Fig.~2 for family-specific and unified-model performance.
+  \item Haas \textit{et al.}: Fig.~1 as an optional teaching overview of response distribution, representation, and model choice.
+\end{itemize}
+
+\section*{Author reading and PDF-download list}
+
+\begin{itemize}
+  \item Reactivity cliffs and ligation state.\mcite{NewmanStonebraker2021}
+  \item Dataset design for reactivity models.\mcite{Raghavan2023}
+  \item Sparse synthetic datasets and model strategy.\mcite{Haas2025}
+  \item Designed catalyst training space and external tests.\mcite{Zahrt2019}
+  \item Unified nonlinear selectivity modelling.\mcite{Singh2020}
+\end{itemize}

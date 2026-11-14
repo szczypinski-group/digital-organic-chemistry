@@ -1,0 +1,145 @@
+% !TeX root = ../notes.tex
+% Proposed prose version aligned to 07-execute-plan.tex.
+
+\chapter{Generating high-quality chemical data}
+
+\begin{notebox}
+  \keypoint{What do you need to learn from this chapter?}
+  Modelling and experiment selection depend on experiments that are executed reproducibly, measured appropriately, and recorded with enough context to be reused.
+  High throughput is valuable only when it increases relevant information rather than the rate at which unrecognised error is produced.
+\end{notebox}
+
+\section{More experiments are not necessarily more information}
+
+The number of experiments is an incomplete measure of a dataset.
+A thousand near-identical endpoints may contain less useful information than a smaller set designed to separate competing chemical explanations.
+Chemical diversity, measurement density, precision, and the distribution of successful and unsuccessful outcomes all affect information content.
+
+Endpoint measurements answer whether a selected outcome was present after a chosen time.
+Reaction-progress measurements also show induction periods, catalyst deactivation, product inhibition, and changes in rate.
+The appropriate measurement therefore depends on whether the objective is screening, prediction, optimisation, or mechanistic understanding.
+
+\begin{warningbox}
+  \keypoint{Automation amplifies the experimental design.}
+  It can amplify informative measurements, but it can also amplify systematic dosing, sampling, or analytical errors.
+\end{warningbox}
+
+\section{Practical FAIR chemical data}
+
+The FAIR principles describe data that are findable, accessible, interoperable, and reusable.\mcite{Wilkinson2016}
+In chemical experiments, reusability requires more than a table of yields.
+The record should identify materials and structures, quantities and units, conditions and timing, vessel or reactor configuration, instrument methods, calibration, processing, and quality-control decisions.
+
+FAIR does not necessarily mean open.
+Sensitive or proprietary data can remain access controlled while still using persistent identifiers, shared schemas, defined units, and traceable processing.
+Accessibility means that authorised users and machines can retrieve the data and its metadata through a clear procedure.
+
+Unsuccessful experiments are part of the scientific record.
+A zero signal, a failed reaction, an instrument fault, and an unprocessed sample are different outcomes and should have different status codes.
+Deleting them or merging them into one numerical zero destroys information needed for modelling and reproducibility.
+
+\section{High-throughput and parallel experimentation}
+
+Parallel experimentation uses arrays of reaction vessels or wells to perform many experiments under coordinated conditions.
+Liquid handlers can dispense small volumes reproducibly, while miniaturisation reduces reagent use and increases the number of conditions that can be tested.
+The same small volumes make evaporation, adsorption, mixing, and dosing errors more important.
+
+A plate layout is part of the experimental design.
+Randomisation, controls, blanks, standards, and replicates help separate chemical trends from spatial or temporal artefacts.
+Reagent identity and concentration should be checked before a campaign because automation will execute an incorrect stock solution faithfully.
+
+\section{Measurement is part of the experiment}
+
+An automated reaction is not complete when the scheduled heating or mixing ends.
+Sampling, quenching, dilution, transfer, analytical measurement, calibration, processing, and quality control determine the recorded response.
+Each step can change the sample or introduce uncertainty.
+
+Chromatography can separate products and internal standards, mass spectrometry can provide molecular evidence, NMR can measure composition and structure, and optical spectroscopy can provide rapid time-resolved signals.
+No analytical method answers every chemical question.
+Orthogonal methods are especially valuable when an automated decision depends on distinguishing conversion, identity, purity, topology, or function.
+
+The status ``no product'' should be used only when the analysis was capable of detecting the expected product and passed its quality checks.
+A saturated detector, missing injection, failed peak integration, or ambiguous mass signal is an analytical status rather than a chemical negative result.
+
+\section{Flow as a data-generation platform}
+
+Flow reactors vary conditions continuously and are therefore well suited to systematic data generation.
+For an ideal reactor volume $V$ operated at volumetric flow rate $Q$, the nominal residence time is
+\begin{equation}
+  \tau=\frac{V}{Q}.
+\end{equation}
+The equation is useful only when the actual mixing, dispersion, phases, and reactor volume are understood.
+
+A condition change at the inlet does not appear instantaneously at the outlet.
+Transport lag and dispersion create transitions between experiments, and a sample collected before steady state may contain material produced under several conditions.
+Inline or at-line analysis must therefore be synchronised with the physical movement of reaction segments.
+
+Flow should be selected because its control, heat and mass transfer, pressure range, or analytical integration suits the chemical question.
+It is not automatically superior to parallel batch experimentation.
+Hybrid platforms can use parallel preparation with serial reaction or analysis when that division matches the bottleneck.
+
+\section{High-throughput kinetics: Mayer}
+
+Kuffer and Mayer combined liquid-handling robotics with continuous UV monitoring to measure acid- and base-catalysed carbonyl-addition kinetics across a multiparameter space.\mcite{KufferMayer2026}
+The workflow generates complete kinetic traces and converts them into rate constants rather than recording only a final absorbance.
+A mechanistic rate model then separates specific acid, specific base, general acid or base, and background contributions.
+
+The relative reactivity of the aldehydes changes between catalytic regimes.
+That observation would be obscured by a dataset that treated every measurement as one undifferentiated prediction problem.
+The case shows how throughput and mechanistic structure can reinforce one another when the measurement retains the relevant information.
+
+\section{Automated synthesis and analysis: Bourne}
+
+Avila and co-workers integrated a stopped-flow reactor into a high-throughput platform for library synthesis and at-line analysis.\mcite{Avila2022}
+Reaction segments are moved into the reactor, held for a defined reaction time, and then transferred for analysis.
+The architecture retains access to elevated temperature and pressure while reducing the material required to maintain a continuously operating steady state.
+
+The campaign performed hundreds of reactions and generated a dataset for a feed-forward neural network.
+The modelling component is useful because it consumes standardised observations produced by the platform.
+The main Chapter~7 lesson is that reactor control, sample handling, analysis, and data capture must be engineered together before a model can guide later experiments reliably.
+
+\section{Cage discovery: Greenaway progression}
+
+\subsection{Computation fused with robotic synthesis}
+
+Greenaway and co-workers combined computational screening with robotic synthesis for 78 precursor combinations targeting organic cages.\mcite{Greenaway2018}
+The complete matrix records clean cage formation, partial formation, and negative outcomes rather than displaying only isolated successes.
+Computational topology and formation-energy predictions can therefore be compared with the experimental result for every planned combination.
+
+The screen produced clean formation of 33 cages and exposed unexpected cage-catenane chemistry.
+Systematic execution did not remove surprise.
+It made the surprise visible against a complete and internally comparable background.
+
+\subsection{Automated synthesis, characterisation, and analysis}
+
+Basford and co-workers expanded the workflow to 366 imine-condensation reactions and automated substantial parts of synthesis, sample preparation, characterisation, and data analysis.\mcite{Basford2024}
+Turbidity, NMR, and high-resolution mass spectrometry report different aspects of the reaction outcome.
+Their combination supports assignments of species type, conversion, and cage topology.
+
+The study also links experimental results to a much larger set of computed hypothetical structures and pore properties.
+Experiment maps, analysis code, and raw data were deposited alongside the article.
+This combination makes the case especially useful for discussing practical FAIR data, provenance, and the importance of reusable analysis rather than throughput alone.
+
+\section{Szczypiński cage automation}
+
+Shields and co-workers combined low-cost conformational calculations with a semi-automated high-throughput crystallisation campaign for an amide-linked organic cage.\mcite{ShieldsCage2024}
+The calculations identified several accessible cage conformations with different internal acid--acid distances.
+The crystallisation screen then trapped five of the predicted conformers in experimentally determined solid-state structures.
+
+This is a genuine automation case because a programmable platform executes a broad crystallisation campaign reproducibly.
+It is not an autonomous case because experimental measurements do not select subsequent crystallisation conditions during the demonstrated workflow.
+The distinction prepares the transition to the final chapter.
+
+\section{From execution to autonomy}
+
+Chapter~7 has assembled the infrastructure required to execute experiments, measure outcomes, perform quality control, and create machine-readable records.
+Those capabilities are necessary but not sufficient for autonomy.
+A loop becomes autonomous when the measurement changes the decision about which action or experiment occurs next.
+
+\section{Summary}
+
+Experiment count and information content are not equivalent.
+FAIR chemical data require identities, conditions, measurement context, processing, provenance, and explicit failure states.
+High-throughput batch and flow systems should be selected according to the chemical and analytical task.
+The Mayer, Bourne, Greenaway, and Szczypiński cases show different ways to generate dense, reusable, and chemically informative data.
+Automation becomes autonomy only when measured outcomes influence subsequent decisions.
