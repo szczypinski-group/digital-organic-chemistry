@@ -4,30 +4,43 @@
 \chapter{Choosing the next experiment}
 
 \begin{notebox}
-  \keypoint{Intellectual question:} Given the objective, current observations, model predictions, and uncertainty, which experiment should be performed next?
+  \keypoint{What do you need to learn from this chapter?}
+  We can perform a nearly-infinite number of different experiments.
+  Reaction optimisation is a selection problem defined by variables, objectives, constraints, available observations, and uncertainty.
 \end{notebox}
 
 \section{What is being optimised?}
 
-\begin{itemize}
-  \item Define continuous and categorical variables, constraints, feasible regions, and objective functions.
-  \item Distinguish measured outputs from the objective used to rank candidate experiments.
-  \item Show that ``best'' depends on priorities such as yield, selectivity, productivity, cost, hazard, and waste.
-  \item State experimental budgets and stopping rules before comparing optimisation strategies.
-\end{itemize}
+An optimisation problem begins with a decision on what the optimisation target is.
+Some variables can be represented as continous numbers -- their theoretical range is infinite.
+Such \keypoint{continuous variables} can include temperature, time, concentration, pressure, flow rate, and reagent equivalents.
+On the other hand, \keypoint{categorical variables} can include solvent, catalyst, ligand, base, or reactor architecture.
+The feasible space is smaller than the complete chemical set of all possible combinations because solubility, equipment limits, and chemical compatibility exclude some experiments.
+Experimental budget and safety considerations can also drastically reduce the experimental space.
 
-\section{One variable at a time and hidden interactions}
+\solution{6cm}
+{ \centering
+  \textbf{Categorical and continuous variables}
+}
 
-\begin{itemize}
-  \item Present OVAT as familiar, easy to interpret locally, and often experimentally convenient.
-  \item Show why the path depends on the starting point and ordering of variables.
-  \item Demonstrate that interactions can make a variable appear unimportant at one setting and decisive at another.
-  \item Avoid dismissing OVAT categorically; instead define when its assumptions are weak.
-\end{itemize}
+The objective defines what counts as improvement.
+A reaction with the highest analytical yield may not have the best isolated yield, selectivity, productivity, process mass intensity, cost, or hazard profile.
+The objective function therefore encodes priorities rather than revealing a universal optimum.
 
-\solution{8.0cm}{%
+\section{One variable at a time}
+
+A common optimisation strategy in synthetic laboratories is the so-called \keypoint{one-variable-at-a-time} (OVAT) approach.
+In this strategy, we change one conditions of the process while holding the others fixed.
+The procedure is intuitive, produces plots that are easy to interpret locally, and can be practical when experiments are expensive or difficult to reconfigure.
+
+A problem occurs when the effect of one variable depends on the level of another.
+For example, increasing temperature may improve conversion with one base but accelerate decomposition with another.
+An OVAT experiment performed at only one base identity cannot reveal the full interaction.
+The resulting path can stop at a locally favourable setting while missing a better region elsewhere.
+
+\solution{6.0cm}{%
   \centering
-  \resizebox{0.9\linewidth}{!}{%
+  \resizebox{0.7\linewidth}{!}{%
     \begin{tikzpicture}[
       axis/.style={draw=darkGrey,line width=1.4pt,->,>=Stealth},
       contour/.style={draw=darkBlue,line width=1.1pt},
@@ -43,25 +56,21 @@
       \fill[darkGreen] (5.9,3.5) circle (4pt);
       \draw[path] (1.0,1.0) -- (4.2,1.0);
       \draw[path] (4.2,1.0) -- (4.2,3.1);
-      \draw[path] (4.2,3.1) -- (5.4,3.1);
-      \foreach \x/\y in {1.0/1.0,4.2/1.0,4.2/3.1,5.4/3.1}{\fill[point] (\x,\y) circle (3.4pt);}
+      \foreach \x/\y in {1.0/1.0,4.2/1.0,4.2/3.1}{\fill[point] (\x,\y) circle (3.4pt);}
       \node[label,text=darkRed] at (2.4,0.55) {OVAT path};
       \node[label,text=darkGreen] at (6.2,4.0) {true optimum};
     \end{tikzpicture}%
   }
 }
 
-\section{Factorial thinking, design of experiments, and response surfaces}
+\section{Design of experiments}
 
-\begin{itemize}
-  \item Introduce factors, levels, main effects, and interactions.
-  \item Compare full and fractional factorial designs at the level required for chemical judgement.
-  \item Explain curvature and the role of response-surface designs.
-  \item Emphasise information gained per experiment rather than formula memorisation.
-\end{itemize}
+A framework for a factorial design where several factors are varied to estimate the curvature of the response surface is \keypoint{design-of-experiments} (DoE).
+The fitted surface remains empirical, but it can identify influential variables, interactions, and promising regions more efficiently than a sequence of uncoordinated tests.
 
-\solution{7.0cm}{%
+\solution{6.0cm}{%
   \centering
+  \resizebox{0.45\linewidth}{!}{%
   \begin{tikzpicture}[
     axis/.style={draw=darkGrey,line width=1.4pt,->,>=Stealth},
     full/.style={fill=darkBlue,draw=darkBlue},
@@ -74,57 +83,45 @@
     \fill[centre] (3.7,2.7) circle (5pt);
     \node[label] at (5.8,5.0) {factorial grid};
     \node[label] at (4.9,2.25) {centre point tests curvature};
-  \end{tikzpicture}
+  \end{tikzpicture}%
+  }
+  \includegraphics[width=0.45\textwidth]{figures/CH6-doe.png}
 }
 
 \section{Sequential experimentation}
 
-\begin{itemize}
-  \item Contrast a fixed experimental design with an adaptive sequence.
-  \item Show that every round updates knowledge and therefore can change the next choice.
-  \item Discuss one-at-a-time and batched selections.
-  \item Define stopping through objective attainment, exhausted budget, or lack of expected improvement.
-\end{itemize}
+A fixed design is chosen before its outcomes are known.
+A sequential campaign uses each completed round to update the description of the response and to choose subsequent experiments.
+This adaptivity can concentrate measurements near promising, uncertain, or chemically informative regions.
 
-\section{Prediction with uncertainty}
+Sequential does not necessarily mean one experiment at a time.
+A batch can be selected when reactions run in parallel or when instrument scheduling dominates the cost.
+The price of batching is that experiments within the batch are chosen before their neighbours have returned results.
+A stopping rule is also required, such as reaching a target, exhausting the budget, or observing little expected improvement.
 
-\begin{itemize}
-  \item Introduce a surrogate model as an inexpensive approximation to the experimental response.
-  \item Explain mean prediction and predictive uncertainty without deriving Gaussian-process equations.
-  \item Distinguish uncertainty caused by sparse sampling from irreducible experimental noise.
-  \item Warn that uncertainty is model dependent and is not a guarantee that all missing chemistry has been recognised.
-\end{itemize}
+A \keypoint{surrogate model} approximates the expensive experimental response using the observations collected so far (Fig.~\ref{fig6:bo}).
+We say \textit{expensive} as it is impossible to collect data for all potential experiments.
+Gaussian-process models are useful conceptually because they return both a \keypoint{mean prediction} and an \keypoint{uncertainty estimate} over the search space.
+The uncertainty is generally smaller near informative observations and larger in poorly sampled regions.
+This uncertainty is conditional on the chosen model and representation.
+It does not guarantee that a hidden mechanism, decomposition pathway, or analytical failure has been considered.
+Experimental noise, model uncertainty, and ignorance of missing chemistry should not be collapsed into one unqualified confidence interval.
 
-\solution{7.5cm}{%
+\solution{10cm}{
+% \begin{figure}[htbp]
   \centering
-  \resizebox{0.9\linewidth}{!}{%
-    \begin{tikzpicture}[
-      axis/.style={draw=darkGrey,line width=1.4pt,->,>=Stealth},
-      mean/.style={draw=darkBlue,line width=2.3pt},
-      uncertainty/.style={fill=paleBlue,draw=none,opacity=0.75},
-      datum/.style={fill=darkGrey,draw=darkGrey},
-      label/.style={font=\small\sffamily,text=darkGrey,align=center}
-    ]
-      \draw[axis] (0,0) -- (10,0) node[below] {reaction condition};
-      \draw[axis] (0,0) -- (0,6) node[left,rotate=90] {predicted objective};
-      \fill[uncertainty] plot[smooth] coordinates {(0.5,2.3) (2,3.7) (4,2.9) (6,4.4) (8,3.1) (9.5,4.0)} -- plot[smooth] coordinates {(9.5,2.0) (8,2.2) (6,3.6) (4,2.1) (2,3.0) (0.5,1.0)} -- cycle;
-      \draw[mean] plot[smooth] coordinates {(0.5,1.65) (2,3.35) (4,2.5) (6,4.0) (8,2.65) (9.5,3.0)};
-      \foreach \x/\y in {1.8/3.2,4.1/2.4,6.0/4.1}{\fill[datum] (\x,\y) circle (3.5pt);}
-      \node[label] at (8.3,4.5) {uncertainty grows\\away from observations};
-    \end{tikzpicture}%
-  }
+  \includegraphics[width=0.8\textwidth]{figures/CH6-BO.png}
+%   \caption{One-dimensional depiction of Bayesian optimisation showing a Gaussian regression surrogate model fitted to the data collected from an unknown objective. The corresponding utility function is maximised to select the next experiment.}
+%   \label{fig6:bo}
+% \end{figure}
 }
 
-\section{Bayesian optimisation}
+\keypoint{Bayesian optimisation} combines a surrogate model with an \keypoint{acquisition function}.
+The acquisition function ranks candidate experiments by balancing predicted performance and uncertainty.
+Exploitation selects a condition expected to perform well, while exploration selects a condition that may improve the model or reveal an unsampled region.
+Expected improvement is one way to combine these motives into a single ranking.
 
-\begin{itemize}
-  \item Define an acquisition function as a rule for ranking candidate experiments using prediction and uncertainty.
-  \item Compare exploitation, exploration, and expected improvement conceptually.
-  \item Use Shields and co-workers as the method anchor and authentic reaction-optimisation benchmark.\mcite{Shields2021}
-  \item Make clear that the optimiser serves an objective supplied by the chemist.
-\end{itemize}
-
-\solution{7.0cm}{%
+\solution{5.0cm}{%
   \centering
   \resizebox{0.94\linewidth}{!}{%
     \begin{tikzpicture}[
@@ -145,14 +142,29 @@
   }
 }
 
+Shields and co-workers benchmarked Bayesian reaction optimisation across several reaction datasets and compared machine recommendations with human decisions (Fig.~\ref{fig6:bo-human}).\mcite{Shields2021}
+In their `game', participants had one month to find optimal reaction conditions while performing five reactions per day (the `strive for five' synthetic chemistry mentality).
+A web application returned the experimental results to the participants based on the outcomes of a previous high-throughput experimental campaign.
+A method that repeatedly reaches good regions with fewer experiments is more generally useful than one that occasionally finds an excellent point by chance.
+Researchers have since applied this approach to many other reaction optimisation projects.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/CH6-BOvsDoyle.png}
+  \caption{Comparison of a Bayesian optimisation performance against human researchers with fixed experimental budget.}
+  \label{fig6:bo-human}
+\end{figure}
+
 \section{Multiple objectives and constraints}
 
-\begin{itemize}
-  \item Place yield, selectivity, productivity, cost, hazard, energy, and process mass intensity in the same decision framework.
-  \item Define dominance and the Pareto front.
-  \item Show why there may be no unique best experiment without an explicit preference.
-  \item Represent unsafe or infeasible conditions as constraints rather than as attractive high-uncertainty points.
-\end{itemize}
+Chemical optimisation often has several objectives.
+Yield and selectivity may conflict with productivity, solvent use, energy demand, cost, or hazard.
+A solution is dominated when another tested or predicted solution is at least as good in every objective and better in at least one.
+The non-dominated solutions form a \keypoint{Pareto front}.
+The Pareto front does not choose among the trade-offs.
+It exposes the consequences of prioritising one objective over another.
+A chemist or process team must still decide whether a small gain in yield justifies additional waste, cost, or risk.
+Unsafe or technically impossible regions should be represented as constraints rather than rewarded merely because the model is uncertain there.
 
 \solution{7.0cm}{%
   \centering
@@ -165,17 +177,24 @@
       unsafe/.style={fill=paleRed,draw=darkRed,opacity=0.55},
       label/.style={font=\small\sffamily,text=darkGrey,align=center}
     ]
-      \draw[axis] (0,0) -- (9.5,0) node[below] {productivity $\rightarrow$};
+      \draw[axis] (0,0) -- (9.5,0) node[below] {yield $\rightarrow$};
       \draw[axis] (0,0) -- (0,6) node[left,rotate=90] {selectivity $\rightarrow$};
-      \fill[unsafe] (7.8,0.1) rectangle (9.2,5.8);
       \foreach \x/\y in {1.2/1.2,2.1/2.0,2.8/1.3,3.6/2.7,4.5/2.0,5.1/3.2,6.1/2.8}{\fill[dominated] (\x,\y) circle (3.2pt);}
       \foreach \x/\y in {2.0/4.9,3.5/4.6,4.9/4.1,6.2/3.6,7.2/3.0}{\fill[pareto] (\x,\y) circle (4pt);}
       \draw[frontier] plot[smooth] coordinates {(2.0,4.9) (3.5,4.6) (4.9,4.1) (6.2,3.6) (7.2,3.0)};
       \node[label,text=darkGreen] at (4.8,5.2) {Pareto front};
-      \node[label,text=darkRed,rotate=90] at (8.5,3.0) {unsafe or infeasible};
     \end{tikzpicture}%
   }
 }
+
+\section{Towards robust data collection}
+
+
+
+
+\section{In-domain and out-of-domain performance}
+
+
 
 \section{Pidko--Kalikadien: why model-guided choice can fail}
 
@@ -222,7 +241,7 @@
       \draw[leftcurve] plot[smooth] coordinates {(0.6,1.0) (2.0,2.0) (3.5,3.7) (4.6,4.1)};
       \draw[rightcurve] plot[smooth] coordinates {(5.4,1.6) (6.5,3.1) (7.8,4.6) (9.2,5.1)};
       \draw[boundary] (5.0,0.2) -- (5.0,5.7);
-      \foreach \x/\y in {2.0/2.0,4.2/4.0,5.7/2.0,7.8/4.6}{\fill[step] (\x,\y) circle (4pt);}
+      % \foreach \x/\y in {2.0/2.0,4.2/4.0,5.7/2.0,7.8/4.6}{\fill[step] (\x,\y) circle (4pt);}
       \node[label,text=darkYellow] at (5.0,5.9) {unrecognised mechanism change};
       \node[label] at (7.0,1.0) {the optimiser sees outcomes,\\not mechanisms};
     \end{tikzpicture}%
